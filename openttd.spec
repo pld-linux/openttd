@@ -16,6 +16,7 @@ Requires:	TiMidity++
 BuildRequires:	SDL-devel
 %{?with_home_etc:BuildRequires:	home-etc-devel}
 BuildRequires:	libpng-devel
+BuildRequires:	sed >= 4
 BuildRequires:	zlib-devel
 BuildRoot:	%{tmpdir}/%{name}-%{version}-root-%(id -u -n)
 
@@ -38,6 +39,9 @@ Do uruchomienia wymagane s± pliki danych z Transport Tycoon Deluxe.
 %setup -q -n %{name}
 %patch0 -p1
 %{?with_home_etc:%patch1 -p1}
+
+# Let's pldize
+sed -i 's/:Unix/:PLD Linux/' lang/*
 
 %build
 %{__make} \
