@@ -1,0 +1,11 @@
+[Desktop Entry]
+Encoding=UTF-8
+Name=OpenTTD server
+Name[pl]=Serwer OpenTTD
+Comment=Open Transport Tycoon Deluxe dedicated server
+Comment[pl]=Dedykowany serwer Open Transport Tycoon Deluxe
+Exec=openttd-dedicated
+Terminal=true
+Type=Application
+Categories=Game;StrategyGame;
+# vi: encoding=utf-8
