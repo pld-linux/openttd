@@ -18,7 +18,7 @@ BuildRequires:	libpng-devel
 BuildRequires:	sed >= 4
 BuildRequires:	unzip
 BuildRequires:	zlib-devel
-Requires:	TiMidity++
+#Requires:	TiMidity++
 BuildRoot:	%{tmpdir}/%{name}-%{version}-root-%(id -u -n)
 
 %description
