@@ -10,6 +10,7 @@ Group:		X11/Applications/Games
 #Source0:	http://dl.sf.net/openttd/%{name}-%{version}.tar.bz2
 Source0:	%{name}-%{snap}.tar.bz2
 # Source0-md5:	47586a09afd6487267997eb0c755d157
+Source1:	%{name}.desktop
 Patch0:		%{name}-home_etc.patch
 Patch1:		%{name}-personal-data.patch
 URL:		http://www.openttd.com/
@@ -117,6 +118,8 @@ mv openttd openttd-dedicated
 %install
 rm -rf $RPM_BUILD_ROOT
 
+install -d $RPM_BUILD_ROOT%{_desktopdir}
+
 %{__make} install \
 	DEST_DIR=$RPM_BUILD_ROOT \
 	INSTALL=1 \
@@ -125,6 +128,7 @@ rm -rf $RPM_BUILD_ROOT
 	DATA_DIR="%{_datadir}/%{name}/"
 
 install openttd-dedicated $RPM_BUILD_ROOT%{_bindir}
+install %{SOURCE1} $RPM_BUILD_ROOT%{_desktopdir}
 
 %clean
 rm -rf $RPM_BUILD_ROOT
@@ -133,6 +137,7 @@ rm -rf $RPM_BUILD_ROOT
 %defattr(644,root,root,755)
 %doc changelog.txt readme.txt docs/{Manual.txt,console.txt,multiplayer.txt}
 %attr(755,root,root) %{_bindir}/%{name}
+%{_desktopdir}/%{name}.desktop
 
 %files data
 %defattr(644,root,root,755)
