@@ -93,8 +93,7 @@ find lang/ -type f -exec sed -i 's/:Unix/:PLD Linux/' \{\} \;
 	WITH_NETWORK=1 \
 	WITH_SDL= \
 	WITH_PNG= \
-	DEDICATED=1 \
-	RELEASE="%{version}"
+	DEDICATED=1
 
 mv openttd openttd-dedicated
 
@@ -114,13 +113,12 @@ mv openttd openttd-dedicated
 	WITH_NETWORK=1 \
 	WITH_SDL=1 \
 	WITH_PNG=1 \
-	DEDICATED=0 \
-	RELEASE="%{version}"
+	DEDICATED=0
 
 %install
 rm -rf $RPM_BUILD_ROOT
 
-install -d $RPM_BUILD_ROOT{%{_desktopdir},%{_mandir}/man6,%{_pixmapsdir}}
+install -d $RPM_BUILD_ROOT{%{_desktopdir},%{_mandir}/man6,%{_pixmapsdir},%{_datadir}/%{name}/scenario}
 
 %{__make} install \
 	DEST_DIR=$RPM_BUILD_ROOT \
@@ -130,23 +128,25 @@ install -d $RPM_BUILD_ROOT{%{_desktopdir},%{_mandir}/man6,%{_pixmapsdir}}
 	DATA_DIR="%{_datadir}/%{name}/"
 
 install openttd-dedicated $RPM_BUILD_ROOT%{_bindir}
+install scenario/* $RPM_BUILD_ROOT%{_datadir}/%{name}/scenario
 install %{SOURCE1} $RPM_BUILD_ROOT%{_desktopdir}
 install %{SOURCE2} $RPM_BUILD_ROOT%{_desktopdir}
 install docs/openttd.6 $RPM_BUILD_ROOT%{_mandir}/man6
-install media/openttd.64.png $RPM_BUILD_ROOT%{_pixmapsdir}/openttd.png
+install media/openttd.256.png $RPM_BUILD_ROOT%{_pixmapsdir}/openttd.png
 
 %clean
 rm -rf $RPM_BUILD_ROOT
 
 %files
 %defattr(644,root,root,755)
-%doc changelog.txt readme.txt docs/{Manual.txt,console.txt,multiplayer.txt}
+%doc changelog.txt known-bugs.txt readme.txt docs/{Manual.txt,console.txt,multiplayer.txt}
 %attr(755,root,root) %{_bindir}/%{name}
 %{_desktopdir}/%{name}.desktop
 %{_mandir}/man6/*
 
 %files data
 %defattr(644,root,root,755)
+%doc scripts
 %{_datadir}/%{name}
 %{_pixmapsdir}/*
 
