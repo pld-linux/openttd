@@ -8,4 +8,5 @@ Exec=openttd-dedicated
 Terminal=true
 Type=Application
 Categories=Game;StrategyGame;
+Icon=openttd
 # vi: encoding=utf-8
