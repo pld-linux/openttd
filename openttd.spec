@@ -9,7 +9,7 @@ License:	GPL
 Group:		X11/Applications/Games
 #Source0:	http://dl.sf.net/openttd/%{name}-%{version}.tar.bz2
 Source0:	%{name}-%{snap}.tar.bz2
-# Source0-md5:	47586a09afd6487267997eb0c755d157
+# Source0-md5:	e64aac0bd68402ac46880dfb1f7716ea
 Source1:	%{name}.desktop
 Source2:	%{name}-server.desktop
 Patch0:		%{name}-home_etc.patch
