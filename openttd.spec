@@ -1,20 +1,17 @@
-%define		snap	20041217
 %bcond_without	home_etc	# without home_etc support
 Summary:	An open source reimplementation of the Microprose game "Transport Tycoon Deluxe"
 Summary(pl):	Otwarta reimplementacja gry Transport Tycoon Deluxe
 Name:		openttd
-Version:	0.3.4
-Release:	1.%{snap}.1
+Version:	0.3.5
+Release:	1
 License:	GPL
 Group:		X11/Applications/Games
-#Source0:	http://dl.sf.net/openttd/%{name}-%{version}.tar.bz2
-Source0:	%{name}-%{snap}.tar.bz2
-# Source0-md5:	e64aac0bd68402ac46880dfb1f7716ea
+Source0:	http://dl.sf.net/openttd/%{name}-%{version}-source.tar.gz
+# Source0-md5:	10a97eac9c77b977ddaa11660a3ccb7c
 Source1:	%{name}.desktop
 Source2:	%{name}-server.desktop
 Patch0:		%{name}-home_etc.patch
 Patch1:		%{name}-personal-data.patch
-Patch2:		%{name}-gradual_load_times.patch
 URL:		http://www.openttd.com/
 BuildRequires:	SDL-devel
 %{?with_home_etc:BuildRequires:	home-etc-devel}
@@ -72,13 +69,12 @@ Ten pakiet zawiera dedykowany serwer OpenTTD. Nale¿y zwróciæ uwagê,
 ¿e graficzny klient OpenTTD równie¿ posiada t± funkcjonalno¶æ.
 
 %prep
-%setup -q -n %{name}
+%setup -q
 %{?with_home_etc:%patch0 -p1}
 %patch1 -p1
-%patch2 -p0
 
 # Let's pldize
-sed -i 's/:Unix/:PLD Linux/' lang/*
+find lang/ -type f -exec sed -i 's/:Unix/:PLD Linux/' \{\} \;
 
 %build
 %{__make} \
@@ -96,7 +92,8 @@ sed -i 's/:Unix/:PLD Linux/' lang/*
 	WITH_NETWORK=1 \
 	WITH_SDL= \
 	WITH_PNG= \
-	DEDICATED=1
+	DEDICATED=1 \
+	RELEASE="%{version}"
 
 mv openttd openttd-dedicated
 
@@ -116,7 +113,8 @@ mv openttd openttd-dedicated
 	WITH_NETWORK=1 \
 	WITH_SDL=1 \
 	WITH_PNG=1 \
-	DEDICATED=0
+	DEDICATED=0 \
+	RELEASE="%{version}"
 
 %install
 rm -rf $RPM_BUILD_ROOT
