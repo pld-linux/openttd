@@ -1,0 +1,44 @@
+diff -ruN openttd./fileio.c openttd/fileio.c
+--- openttd./fileio.c	2004-12-07 18:16:57.000000000 +0100
++++ openttd/fileio.c	2004-12-07 19:29:33.034947832 +0100
+@@ -121,6 +121,11 @@
+ 		}
+ #endif
+ 	}
++	if (f == NULL) {
++		// Look for file in personal data dir
++		sprintf(buf, "%s%s", _path.personal_data_dir, filename);
++		f = fopen(buf, "rb");
++	}
+ #endif
+ 
+ 	if (f == NULL)
+diff -ruN openttd./unix.c openttd/unix.c
+--- openttd./unix.c	2004-12-07 19:31:02.136402352 +0100
++++ openttd/unix.c	2004-12-07 19:27:33.786076416 +0100
+@@ -507,6 +507,7 @@
+ 	_path.scenario_dir = str_fmt("%sscenario", _path.personal_dir);
+ 	_path.gm_dir = str_fmt("%sgm/", _path.game_data_dir);
+ 	_path.data_dir = str_fmt("%sdata/", _path.game_data_dir);
++	_path.personal_data_dir = str_fmt("%sdata/", _path.personal_dir);
+ 	_config_file = str_fmt("%sopenttd.cfg", _path.personal_dir);
+ 	
+ #if defined CUSTOM_LANG_DIR
+@@ -522,5 +523,6 @@
+ 	mkdir(_path.save_dir, 0755);
+ 	mkdir(_path.autosave_dir, 0755);
+ 	mkdir(_path.scenario_dir, 0755);
++	mkdir(_path.personal_data_dir, 0755);
+ }
+ 
+diff -ruN openttd./variables.h openttd/variables.h
+--- openttd./variables.h	2004-12-07 18:16:57.000000000 +0100
++++ openttd/variables.h	2004-12-07 19:25:40.088361096 +0100
+@@ -193,6 +193,7 @@
+ typedef struct Paths {
+ 	char *personal_dir;  // includes cfg file and save folder
+ 	char *game_data_dir; // includes data, gm, lang
++	char *personal_data_dir; // personal game data, like newgrf files
+ 	char *data_dir;
+ 	char *gm_dir;
+ 	char *lang_dir;
