@@ -1,6 +1,6 @@
 %bcond_without	home_etc	# without home_etc support
-Summary:	An open source clone of the Microprose game "Transport Tycoon Deluxe"
-Summary(pl):	Otwarty klon gry Transport Tycoon Deluxe
+Summary:	An open source reimplementation of the Microprose game "Transport Tycoon Deluxe"
+Summary(pl):	Otwarta reimplementacja gry Transport Tycoon Deluxe
 Name:		openttd
 Version:	0.3.2.1
 Release:	3
