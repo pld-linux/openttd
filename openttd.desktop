@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=Open Transport Tycoon Deluxe
+Comment=An Open Source reimplementation of the Microprose game "Transport Tycoon Deluxe"
+Comment[pl]=Otwarta reimplementacja gry Transport Tycoon Deluxe
+TryExec=openttd
+Exec=openttd
+Terminal=false
+Type=Application
+Encoding=UTF-8
+Categories=Game;StrategyGame;
+# vi: encoding=utf-8
