@@ -1,10 +1,10 @@
-%define		snap	20041207
+%define		snap	20041217
 %bcond_without	home_etc	# without home_etc support
 Summary:	An open source reimplementation of the Microprose game "Transport Tycoon Deluxe"
 Summary(pl):	Otwarta reimplementacja gry Transport Tycoon Deluxe
 Name:		openttd
 Version:	0.3.4
-Release:	1.%{snap}.3
+Release:	1.%{snap}.1
 License:	GPL
 Group:		X11/Applications/Games
 #Source0:	http://dl.sf.net/openttd/%{name}-%{version}.tar.bz2
@@ -14,6 +14,7 @@ Source1:	%{name}.desktop
 Source2:	%{name}-server.desktop
 Patch0:		%{name}-home_etc.patch
 Patch1:		%{name}-personal-data.patch
+Patch2:		%{name}-gradual_load_times.patch
 URL:		http://www.openttd.com/
 BuildRequires:	SDL-devel
 %{?with_home_etc:BuildRequires:	home-etc-devel}
@@ -74,6 +75,7 @@ Ten pakiet zawiera dedykowany serwer OpenTTD. Nale¿y zwróciæ uwagê,
 %setup -q -n %{name}
 %{?with_home_etc:%patch0 -p1}
 %patch1 -p1
+%patch2 -p0
 
 # Let's pldize
 sed -i 's/:Unix/:PLD Linux/' lang/*
@@ -119,7 +121,7 @@ mv openttd openttd-dedicated
 %install
 rm -rf $RPM_BUILD_ROOT
 
-install -d $RPM_BUILD_ROOT%{_desktopdir}
+install -d $RPM_BUILD_ROOT{%{_desktopdir},%{_mandir}/man6,%{_pixmapsdir}}
 
 %{__make} install \
 	DEST_DIR=$RPM_BUILD_ROOT \
@@ -131,6 +133,8 @@ install -d $RPM_BUILD_ROOT%{_desktopdir}
 install openttd-dedicated $RPM_BUILD_ROOT%{_bindir}
 install %{SOURCE1} $RPM_BUILD_ROOT%{_desktopdir}
 install %{SOURCE2} $RPM_BUILD_ROOT%{_desktopdir}
+install docs/openttd.6 $RPM_BUILD_ROOT%{_mandir}/man6
+install media/openttd.64.png $RPM_BUILD_ROOT%{_pixmapsdir}/openttd.png
 
 %clean
 rm -rf $RPM_BUILD_ROOT
@@ -140,10 +144,12 @@ rm -rf $RPM_BUILD_ROOT
 %doc changelog.txt readme.txt docs/{Manual.txt,console.txt,multiplayer.txt}
 %attr(755,root,root) %{_bindir}/%{name}
 %{_desktopdir}/%{name}.desktop
+%{_mandir}/man6/*
 
 %files data
 %defattr(644,root,root,755)
 %{_datadir}/%{name}
+%{_pixmapsdir}/*
 
 %files server
 %defattr(644,root,root,755)
