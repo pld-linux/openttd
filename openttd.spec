@@ -1,4 +1,4 @@
-%define		snap	20041120
+%define		snap	20041205
 %bcond_without	home_etc	# without home_etc support
 Summary:	An open source reimplementation of the Microprose game "Transport Tycoon Deluxe"
 Summary(pl):	Otwarta reimplementacja gry Transport Tycoon Deluxe
@@ -9,7 +9,7 @@ License:	GPL
 Group:		X11/Applications/Games
 #Source0:	http://dl.sf.net/openttd/%{name}-%{version}.tar.bz2
 Source0:	%{name}-%{snap}.tar.bz2
-# Source0-md5:	a19eff4336bff73ce6941c8de398cb54
+# Source0-md5:	cc1b137b570ad92c4883f2c25f201279
 Patch0:		%{name}-home_etc.patch
 URL:		http://www.openttd.com/
 BuildRequires:	SDL-devel
