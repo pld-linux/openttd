@@ -1,17 +1,20 @@
+%bcond_without	home_etc	# without home_etc support
 Summary:	An open source clone of the Microprose game "Transport Tycoon Deluxe"
 Summary(pl):	Otwarty klon gry Transport Tycoon Deluxe
 Name:		openttd
 Version:	0.3.2.1
-Release:	2
+Release:	3
 License:	GPL
 Group:		X11/Applications/Games
 #Source0:	http://dl.sf.net/openttd/%{name}-%{version}.tbz
 Source0:	%{name}.tar.bz2
 # Source0-md5:	ee15b3149cafcbda4ee69e117f7c1b50
 Patch0:		%{name}-makefile.patch
+Patch1:		%{name}-home_etc.patch
 URL:		http://www.openttd.com/
 Requires:	TiMidity++
 BuildRequires:	SDL-devel
+%{?with_home_etc:BuildRequires:	home-etc-devel}
 BuildRequires:	libpng-devel
 BuildRequires:	zlib-devel
 BuildRoot:	%{tmpdir}/%{name}-%{version}-root-%(id -u -n)
@@ -34,6 +37,7 @@ Do uruchomienia wymagane s± pliki danych z Transport Tycoon Deluxe.
 %prep
 %setup -q -n %{name}
 %patch0 -p1
+%{?with_home_etc:%patch1 -p1}
 
 %build
 %{__make} \
@@ -43,6 +47,7 @@ Do uruchomienia wymagane s± pliki danych z Transport Tycoon Deluxe.
 	LDFLAGS="%{rpmldflags}" \
 	GAME_DATA_DIR="%{_datadir}/%{name}/" \
 	PERSONAL_DIR=".%{name}" \
+	%{?with_home_etc:WITH_HOME_ETC=1} \
 	USE_HOMEDIR=1 \
 	WITH_NETWORK=1
 

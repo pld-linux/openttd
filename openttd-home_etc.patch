@@ -1,0 +1,54 @@
+diff -urN openttd-orig/Makefile openttd/Makefile
+--- openttd-orig/Makefile	2004-06-11 23:50:52.583070112 +0200
++++ openttd/Makefile	2004-06-12 00:00:55.165463664 +0200
+@@ -48,6 +48,7 @@
+ # WITH_ZLIB: savegames using zlib
+ # WITH_PNG: screenshots using PNG
+ # WITH_SDL: SDL video driver support
++# WITH_HOME_ETC: with home_etc support
+ #
+ # Summary of other defines:
+ # MANUAL_CONFIG: do not use Makefile.config, config options set manually
+@@ -300,6 +301,12 @@
+ 	endif
+ endif
+ 
++# home_etc support
++ifdef WITH_HOME_ETC
++CDEFS += -DWITH_HOME_ETC
++LIBS += -lhome_etc
++endif
++
+ # libpng config
+ ifdef WITH_PNG
+ CDEFS += -DWITH_PNG
+diff -urN openttd-orig/unix.c openttd/unix.c
+--- openttd-orig/unix.c	2004-06-11 22:56:02.000000000 +0200
++++ openttd/unix.c	2004-06-11 23:58:37.681364424 +0200
+@@ -17,6 +17,10 @@
+ #include <SDL.h>
+ #endif
+ 
++#if defined(WITH_HOME_ETC)
++#include <home_etc.h>
++#endif
++
+ #ifdef __MORPHOS__
+ #include <exec/types.h>
+ ULONG __stack = (1024*1024)*2; // maybe not that much is needed actually ;)
+@@ -324,10 +328,14 @@
+ 	_path.game_data_dir = malloc( MAX_PATH );
+ 	strcpy(_path.game_data_dir, GAME_DATA_DIR);
+ 
+-#if defined(USE_HOMEDIR)
++#if defined(USE_HOMEDIR) || defined(WITH_HOME_ETC)
+ 	{
+ 		char *homedir; 
++#if defined(WITH_HOME_ETC)
++		homedir = _HEdir;
++#else
+ 		homedir = getenv("HOME");
++#endif
+ 		
+ 		if(!homedir) {
+ 			struct passwd *pw = getpwuid(getuid());
