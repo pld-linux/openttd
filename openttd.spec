@@ -2,18 +2,16 @@
 Summary:	An open source reimplementation of the Microprose game "Transport Tycoon Deluxe"
 Summary(pl):	Otwarta reimplementacja gry Transport Tycoon Deluxe
 Name:		openttd
-Version:	0.3.2.1
-Release:	5
+Version:	0.3.3
+Release:	1
 License:	GPL
 Group:		X11/Applications/Games
-#Source0:	http://dl.sf.net/openttd/%{name}-%{version}.tbz
-Source0:	%{name}.tar.bz2
-# Source0-md5:	9c4ab6cf09415883f8962daff9deddec
+Source0:	http://dl.sf.net/openttd/%{name}-%{version}.tar.bz2
+# Source0-md5:	141064174eb9dea3435c273012bc8882
 Source1:	http://dl.sf.net/openttd/%{name}-useful.zip
 # Source1-md5:	070d66ed5086515a45f0a40a25c28771
-Patch0:		%{name}-makefile.patch
-Patch1:		%{name}-home_etc.patch
-Patch2:		%{name}-endian.patch
+Patch0:		%{name}-home_etc.patch
+Patch1:		%{name}-endian.patch
 URL:		http://www.openttd.com/
 BuildRequires:	SDL-devel
 %{?with_home_etc:BuildRequires:	home-etc-devel}
@@ -40,10 +38,9 @@ pomys³ów.
 Do uruchomienia wymagane s± pliki danych z Transport Tycoon Deluxe.
 
 %prep
-%setup -q -n %{name}
-%patch0 -p1
-%{?with_home_etc:%patch1 -p1}
-%patch2 -p1
+%setup -q
+%{?with_home_etc:%patch0 -p1}
+%patch1 -p1
 
 unzip %{SOURCE1} -d useful
 
