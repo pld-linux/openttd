@@ -37,18 +37,18 @@ diff -urN openttd-orig/unix.c openttd/unix.c
  #include <exec/types.h>
  ULONG __stack = (1024*1024)*2; // maybe not that much is needed actually ;)
 @@ -324,10 +328,14 @@
- 	_path.game_data_dir = malloc( MAX_PATH );
- 	strcpy(_path.game_data_dir, GAME_DATA_DIR);
+	_path.game_data_dir = malloc( MAX_PATH );
+	strcpy(_path.game_data_dir, GAME_DATA_DIR);
  
 -#if defined(USE_HOMEDIR)
 +#if defined(USE_HOMEDIR) || defined(WITH_HOME_ETC)
- 	{
- 		char *homedir; 
+	{
+		char *homedir;
 +#if defined(WITH_HOME_ETC)
 +		homedir = _HEdir;
 +#else
- 		homedir = getenv("HOME");
+		homedir = getenv("HOME");
 +#endif
- 		
- 		if(!homedir) {
- 			struct passwd *pw = getpwuid(getuid());
+ 
+		if(!homedir) {
+			struct passwd *pw = getpwuid(getuid());
