@@ -1,0 +1,1307 @@
+Index: engine.h
+===================================================================
+--- engine.h	(revision 1079)
++++ engine.h	(working copy)
+@@ -14,6 +14,7 @@
+ 	byte engclass; // 0: steam, 1: diesel, 2: electric
+ 	byte capacity;
+ 	byte cargo_type;
++	uint8 loading_speed;
+ } RailVehicleInfo;
+ 
+ typedef struct ShipVehicleInfo {
+@@ -25,6 +26,7 @@
+ 	byte running_cost;
+ 	byte sfx;
+ 	byte refittable;
++	uint8 loading_speed;
+ } ShipVehicleInfo;
+ 
+ typedef struct AircraftVehicleInfo {
+@@ -37,6 +39,7 @@
+ 	byte max_speed;
+ 	byte mail_capacity;
+ 	uint16 passanger_capacity;
++	uint8 loading_speed;
+ } AircraftVehicleInfo;
+ 
+ typedef struct RoadVehicleInfo {
+@@ -47,6 +50,7 @@
+ 	byte max_speed;
+ 	byte capacity;
+ 	byte cargo_type;
++	uint8 loading_speed;
+ } RoadVehicleInfo;
+ 
+ typedef struct EngineInfo {
+Index: aircraft_cmd.c
+===================================================================
+--- aircraft_cmd.c	(revision 1079)
++++ aircraft_cmd.c	(working copy)
+@@ -171,12 +171,16 @@
+ 		v->cargo_cap = avi->passanger_capacity;
+ 		u->cargo_cap = avi->mail_capacity;
+ 
++		v->loading_speed = avi->loading_speed;
++		u->loading_speed = avi->loading_speed;
++
+ 		v->cargo_type = CT_PASSENGERS;
+ 		u->cargo_type = CT_MAIL;
+ 
+ 		v->string_id = STR_SV_AIRCRAFT_NAME;
+ //		v->next_order_param = v->next_order = 0;
+ 
++//		v->profit_pending = 0;
+ //		v->load_unload_time_rem = 0;
+ //		v->progress = 0;
+ 		v->last_station_visited = 0xFF;
+@@ -1049,6 +1053,12 @@
+ 			return;
+ 		}
+ 
++		if (_patches.gradual_load) {
++			SET_EXPENSES_TYPE(EXPENSES_AIRCRAFT_INC);
++			if (LoadUnloadVehicle(v))
++				return;
++		}
++
+ 		{
+ 			Order b = v->current_order;
+ 			v->current_order.type = OT_NOTHING;
+Index: lang/english.txt
+===================================================================
+--- lang/english.txt	(revision 1079)
++++ lang/english.txt	(working copy)
+@@ -981,6 +981,7 @@
+ STR_CONFIG_PATCHES_JOINSTATIONS					:{LTBLUE}Join train stations built next to each other: {ORANGE}{STRING}
+ STR_CONFIG_PATCHES_FULLLOADANY					:{LTBLUE}Leave station when any cargo is full, if 'full load': {ORANGE}{STRING}
+ STR_CONFIG_PATCHES_IMPROVEDLOAD					:{LTBLUE}Use improved loading algorithm: {ORANGE}{STRING}
++STR_CONFIG_PATCHES_GRADUALLOAD					:{LTBLUE}Use gradual loading: {ORANGE}{STRING}
+ STR_CONFIG_PATCHES_INFLATION					:{LTBLUE}Inflation: {ORANGE}{STRING}
+ STR_CONFIG_PATCHES_SELECTGOODS					:{LTBLUE}Deliver cargo to a station only when there is a demand: {ORANGE}{STRING}
+ STR_CONFIG_PATCHES_LONGBRIDGES					:{LTBLUE}Allow building very long bridges: {ORANGE}{STRING}
+Index: variables.h
+===================================================================
+--- variables.h	(revision 1079)
++++ variables.h	(working copy)
+@@ -89,6 +89,7 @@
+ 	bool join_stations;			// allow joining of train stations
+ 	bool full_load_any;			// new full load calculation, any cargo must be full
+ 	bool improved_load;			// improved loading algorithm
++	bool gradual_load;			// gradual loading
+ 	byte station_spread;		// amount a station may spread
+ 	bool inflation;					// disable inflation
+ 	bool selectgoods;       // only send the goods to station if a train has been there
+Index: roadveh_cmd.c
+===================================================================
+--- roadveh_cmd.c	(revision 1079)
++++ roadveh_cmd.c	(working copy)
+@@ -148,10 +148,12 @@
+ 		v->spritenum = rvi->image_index;
+ 		v->cargo_type = rvi->cargo_type;
+ 		v->cargo_cap = rvi->capacity;
++		v->loading_speed = rvi->loading_speed;
+ //		v->cargo_count = 0;
+ 		v->value = cost;
+ //		v->day_counter = 0;
+ //		v->next_order_param = v->next_order = 0;
++//		v->profit_pending = 0;
+ //		v->load_unload_time_rem = 0;
+ //		v->progress = 0;
+ 
+@@ -627,6 +629,15 @@
+ 			return;
+ 		}
+ 
++		if (_patches.gradual_load) {
++			SET_EXPENSES_TYPE(EXPENSES_ROADVEH_INC);
++			if (LoadUnloadVehicle(v)) {
++				InvalidateWindow(WC_ROADVEH_LIST, v->owner);
++				MarkRoadVehDirty(v);
++				return;
++			}
++		}
++
+ 		{
+ 			Order b = v->current_order;
+ 			v->current_order.type = OT_LEAVESTATION;
+Index: saveload.c
+===================================================================
+--- saveload.c	(revision 1079)
++++ saveload.c	(working copy)
+@@ -9,7 +9,7 @@
+ 
+ enum {
+ 	SAVEGAME_MAJOR_VERSION = 4,
+-	SAVEGAME_MINOR_VERSION = 1,
++	SAVEGAME_MINOR_VERSION = 2,
+ 
+ 	SAVEGAME_LOADABLE_VERSION = (SAVEGAME_MAJOR_VERSION << 8) + SAVEGAME_MINOR_VERSION
+ };
+Index: train_cmd.c
+===================================================================
+--- train_cmd.c	(revision 1079)
++++ train_cmd.c	(working copy)
+@@ -291,6 +291,7 @@
+ 			v->cargo_type = rvi->cargo_type;
+ 			v->cargo_cap = rvi->capacity;
+ 			v->value = value;
++			v->loading_speed = rvi->loading_speed;
+ //			v->day_counter = 0;
+ 
+ 			e = &_engines[engine];
+@@ -421,12 +422,14 @@
+ 			v->spritenum = rvi->image_index;
+ 			v->cargo_type = rvi->cargo_type;
+ 			v->cargo_cap = rvi->capacity;
++			v->loading_speed = rvi->loading_speed;
+ 			v->max_speed = rvi->max_speed;
+ //			v->cargo_count = 0;
+ 			v->value = value;
+ //			v->day_counter = 0;
+ //			v->current_order = 0;
+ //			v->next_station = 0;
++//			v->profit_pending = 0;
+ //			v->load_unload_time_rem = 0;
+ //			v->progress = 0;
+ //			v->targetairport = 0;
+@@ -1685,6 +1688,18 @@
+ 			}
+ 			return;
+ 		}
++		
++		if (_patches.gradual_load) {
++			SET_EXPENSES_TYPE(EXPENSES_TRAIN_INC);
++			if (LoadUnloadVehicle(v)) {
++				InvalidateWindow(WC_TRAINS_LIST, v->owner);
++				MarkTrainDirty(v);
++					
++				// need to update acceleration since the goods on the train changed.
++				UpdateTrainAcceleration(v);
++				return;
++			}
++		}		
+ 
+ 		TrainPlayLeaveStationSound(v);
+ 
+Index: table/engines.h
+===================================================================
+--- table/engines.h	(revision 1079)
++++ table/engines.h	(working copy)
+@@ -266,293 +266,293 @@
+ };
+ 
+ RailVehicleInfo _rail_vehicle_info[NUM_TRAIN_ENGINES] = {
+-	// image_index  max_speed (kph)      running_cost_base
+-	// |  flags     |        power (hp)  |    running_cost_class
+-	// |  |    base_cost     |    weight      |    capacity
+-	// |  |    |    |        |    |      |    |    |    cargo_type
+-	// |  |    |    |        |    |      |    |    |    |
+-	{  2, 0,   7,  64,     300,  47,    50,   0,   0,   0               }, /*   0 */
+-	{ 19, 0,   8,  80,     600,  65,    65,   1,   0,   0               }, /*   1 */
+-	{  2, 0,  10,  72,     400,  85,    90,   0,   0,   0               }, /*   2 */
+-	{  0, 0,  15,  96,     900, 130,   130,   0,   0,   0               }, /*   3 */
+-	{  1, 0,  19, 112,    1000, 140,   145,   0,   0,   0               }, /*   4 */
+-	{ 12, 0,  16, 120,    1400,  95,   125,   1,   0,   0               }, /*   5 */
+-	{ 14, 0,  20, 152,    2000, 120,   135,   1,   0,   0               }, /*   6 */
+-	{  3, 0,  14,  88,    1100, 145,   130,   0,   0,   0               }, /*   7 */
+-	{  0, 0,  13, 112,    1000, 131,   120,   0,   0,   0               }, /*   8 */
+-	{  1, 0,  19, 128,    1200, 162,   140,   0,   0,   0               }, /*   9 */
+-	{  0, 0,  22, 144,    1600, 170,   130,   0,   0,   0               }, /*  10 */
+-	{  8, 1,  11, 112,   600/2,  32,  85/2,   1,  38,   CT_PASSENGERS   }, /*  11 */
+-	{ 10, 1,  14, 120,   700/2,  38,  70/2,   1,  40,   CT_PASSENGERS   }, /*  12 */
+-	{  4, 0,  15, 128,    1250,  72,    95,   1,   0,   0               }, /*  13 */
+-	{  5, 0,  17, 144,    1750, 101,   120,   1,   0,   0               }, /*  14 */
+-	{  4, 0,  18, 160,    2580, 112,   140,   1,   0,   0               }, /*  15 */
+-	{ 14, 0,  23,  96,    4000, 150,   135,   1,   0,   0               }, /*  16 */
+-	{ 12, 0,  16, 112,    2400, 120,   105,   1,   0,   0               }, /*  17 */
+-	{ 13, 0,  30, 112,    6600, 207,   155,   1,   0,   0               }, /*  18 */
+-	{ 15, 0,  18, 104,    1500, 110,   105,   1,   0,   0               }, /*  19 */
+-	{ 16, 1,  35, 160,  3500/2,  95, 205/2,   1,   0,   0               }, /*  20 */
+-	{ 18, 0,  21, 104,    2200, 120,   145,   1,   0,   0               }, /*  21 */
+-	{  6, 1,  20, 200,  4500/2,  70, 190/2,   1,   4,   CT_MAIL         }, /*  22 */
+-	{ 20, 0,  26, 160,    3600,  84,   180,   2,   0,   0               }, /*  23 */
+-	{ 20, 0,  30, 176,    5000,  82,   205,   2,   0,   0               }, /*  24 */
+-	{ 21, 1,  40, 240,  7000/2,  90, 240/2,   2,   0,   0               }, /*  25 */
+-	{ 23, 1,  43, 264,  8000/2,  95, 250/2,   2,   0,   0               }, /*  26 */
+-	{ 33, 2, 247,   0,       0,  25,     0,   0,  40,   CT_PASSENGERS   }, /*  27 */
+-	{ 35, 2, 228,   0,       0,  21,     0,   0,  30,   CT_MAIL         }, /*  28 */
+-	{ 34, 2, 176,   0,       0,  18,     0,   0,  30,   CT_COAL         }, /*  29 */
+-	{ 36, 2, 200,   0,       0,  24,     0,   0,  30,   CT_OIL          }, /*  30 */
+-	{ 37, 2, 192,   0,       0,  20,     0,   0,  25,   CT_LIVESTOCK    }, /*  31 */
+-	{ 38, 2, 190,   0,       0,  21,     0,   0,  25,   CT_GOODS        }, /*  32 */
+-	{ 39, 2, 182,   0,       0,  19,     0,   0,  30,   CT_GRAIN        }, /*  33 */
+-	{ 40, 2, 181,   0,       0,  16,     0,   0,  30,   CT_WOOD         }, /*  34 */
+-	{ 41, 2, 179,   0,       0,  19,     0,   0,  30,   CT_IRON_ORE     }, /*  35 */
+-	{ 42, 2, 196,   0,       0,  18,     0,   0,  20,   CT_STEEL        }, /*  36 */
+-	{ 43, 2, 255,   0,       0,  30,     0,   0,  20,   CT_VALUABLES    }, /*  37 */
+-	{ 44, 2, 191,   0,       0,  22,     0,   0,  25,   CT_FOOD         }, /*  38 */
+-	{ 45, 2, 196,   0,       0,  18,     0,   0,  20,   CT_PAPER        }, /*  39 */
+-	{ 46, 2, 179,   0,       0,  19,     0,   0,  30,   CT_COPPER_ORE   }, /*  40 */
+-	{ 47, 2, 199,   0,       0,  25,     0,   0,  25,   CT_WATER        }, /*  41 */
+-	{ 48, 2, 182,   0,       0,  18,     0,   0,  25,   CT_FRUIT        }, /*  42 */
+-	{ 49, 2, 185,   0,       0,  19,     0,   0,  21,   CT_RUBBER       }, /*  43 */
+-	{ 50, 2, 176,   0,       0,  19,     0,   0,  30,   CT_SUGAR        }, /*  44 */
+-	{ 51, 2, 178,   0,       0,  20,     0,   0,  30,   CT_COTTON_CANDY }, /*  45 */
+-	{ 52, 2, 192,   0,       0,  20,     0,   0,  30,   CT_TOFFEE       }, /*  46 */
+-	{ 53, 2, 190,   0,       0,  21,     0,   0,  20,   CT_BUBBLES      }, /*  47 */
+-	{ 54, 2, 182,   0,       0,  24,     0,   0,  25,   CT_COLA         }, /*  48 */
+-	{ 55, 2, 181,   0,       0,  21,     0,   0,  25,   CT_CANDY        }, /*  49 */
+-	{ 56, 2, 183,   0,       0,  21,     0,   0,  20,   CT_TOYS         }, /*  50 */
+-	{ 57, 2, 196,   0,       0,  18,     0,   0,  22,   CT_BATTERIES    }, /*  51 */
+-	{ 58, 2, 193,   0,       0,  18,     0,   0,  25,   CT_FIZZY_DRINKS }, /*  52 */
+-	{ 59, 2, 191,   0,       0,  18,     0,   0,  30,   CT_PLASTIC      }, /*  53 */
+-	{ 25, 0,  52, 304,    9000,  95,   230,   2,   0,   0               }, /*  54 */
+-	{ 26, 1,  60, 336, 10000/2,  85, 240/2,   2,  25,   CT_PASSENGERS   }, /*  55 */
+-	{ 26, 0,  53, 320,    5000,  95,   230,   2,   0,   0               }, /*  56 */
+-	{ 60, 2, 247,   0,       0,  25,     0,   0,  45,   CT_PASSENGERS   }, /*  57 */
+-	{ 62, 2, 228,   0,       0,  21,     0,   0,  35,   CT_MAIL         }, /*  58 */
+-	{ 61, 2, 176,   0,       0,  18,     0,   0,  35,   CT_COAL         }, /*  59 */
+-	{ 63, 2, 200,   0,       0,  24,     0,   0,  35,   CT_OIL          }, /*  60 */
+-	{ 64, 2, 192,   0,       0,  20,     0,   0,  30,   CT_LIVESTOCK    }, /*  61 */
+-	{ 65, 2, 190,   0,       0,  21,     0,   0,  30,   CT_GOODS        }, /*  62 */
+-	{ 66, 2, 182,   0,       0,  19,     0,   0,  35,   CT_GRAIN        }, /*  63 */
+-	{ 67, 2, 181,   0,       0,  16,     0,   0,  35,   CT_WOOD         }, /*  64 */
+-	{ 68, 2, 179,   0,       0,  19,     0,   0,  35,   CT_IRON_ORE     }, /*  65 */
+-	{ 69, 2, 196,   0,       0,  18,     0,   0,  25,   CT_STEEL        }, /*  66 */
+-	{ 70, 2, 255,   0,       0,  30,     0,   0,  25,   CT_VALUABLES    }, /*  67 */
+-	{ 71, 2, 191,   0,       0,  22,     0,   0,  30,   CT_FOOD         }, /*  68 */
+-	{ 72, 2, 196,   0,       0,  18,     0,   0,  25,   CT_PAPER        }, /*  69 */
+-	{ 73, 2, 179,   0,       0,  19,     0,   0,  35,   CT_COPPER_ORE   }, /*  70 */
+-	{ 47, 2, 199,   0,       0,  25,     0,   0,  30,   CT_WATER        }, /*  71 */
+-	{ 48, 2, 182,   0,       0,  18,     0,   0,  30,   CT_FRUIT        }, /*  72 */
+-	{ 49, 2, 185,   0,       0,  19,     0,   0,  26,   CT_RUBBER       }, /*  73 */
+-	{ 50, 2, 176,   0,       0,  19,     0,   0,  35,   CT_SUGAR        }, /*  74 */
+-	{ 51, 2, 178,   0,       0,  20,     0,   0,  35,   CT_COTTON_CANDY }, /*  75 */
+-	{ 52, 2, 192,   0,       0,  20,     0,   0,  35,   CT_TOFFEE       }, /*  76 */
+-	{ 53, 2, 190,   0,       0,  21,     0,   0,  25,   CT_BUBBLES      }, /*  77 */
+-	{ 54, 2, 182,   0,       0,  24,     0,   0,  30,   CT_COLA         }, /*  78 */
+-	{ 55, 2, 181,   0,       0,  21,     0,   0,  30,   CT_CANDY        }, /*  79 */
+-	{ 56, 2, 183,   0,       0,  21,     0,   0,  25,   CT_TOYS         }, /*  80 */
+-	{ 57, 2, 196,   0,       0,  18,     0,   0,  27,   CT_BATTERIES    }, /*  81 */
+-	{ 58, 2, 193,   0,       0,  18,     0,   0,  30,   CT_FIZZY_DRINKS }, /*  82 */
+-	{ 59, 2, 191,   0,       0,  18,     0,   0,  35,   CT_PLASTIC      }, /*  83 */
+-	{ 28, 0,  70, 400,   10000, 105,   250,   2,   0,   0               }, /*  84 */
+-	{ 29, 0,  74, 448,   12000, 120,   253,   2,   0,   0               }, /*  85 */
+-	{ 30, 0,  82, 480,   15000, 130,   254,   2,   0,   0               }, /*  86 */
+-	{ 31, 1,  95, 640, 20000/2, 150, 255/2,   2,   0,   0               }, /*  87 */
+-	{ 28, 0,  70, 480,   10000, 120,   250,   2,   0,   0               }, /*  88 */
+-	{ 60, 2, 247,   0,       0,  25,     0,   0,  47,   CT_PASSENGERS   }, /*  89 */
+-	{ 62, 2, 228,   0,       0,  21,     0,   0,  37,   CT_MAIL         }, /*  90 */
+-	{ 61, 2, 176,   0,       0,  18,     0,   0,  37,   CT_COAL         }, /*  91 */
+-	{ 63, 2, 200,   0,       0,  24,     0,   0,  37,   CT_OIL          }, /*  92 */
+-	{ 64, 2, 192,   0,       0,  20,     0,   0,  32,   CT_LIVESTOCK    }, /*  93 */
+-	{ 65, 2, 190,   0,       0,  21,     0,   0,  32,   CT_GOODS        }, /*  94 */
+-	{ 66, 2, 182,   0,       0,  19,     0,   0,  37,   CT_GRAIN        }, /*  95 */
+-	{ 67, 2, 181,   0,       0,  16,     0,   0,  37,   CT_WOOD         }, /*  96 */
+-	{ 68, 2, 179,   0,       0,  19,     0,   0,  37,   CT_IRON_ORE     }, /*  97 */
+-	{ 69, 2, 196,   0,       0,  18,     0,   0,  27,   CT_STEEL        }, /*  98 */
+-	{ 70, 2, 255,   0,       0,  30,     0,   0,  27,   CT_VALUABLES    }, /*  99 */
+-	{ 71, 2, 191,   0,       0,  22,     0,   0,  32,   CT_FOOD         }, /* 100 */
+-	{ 72, 2, 196,   0,       0,  18,     0,   0,  27,   CT_PAPER        }, /* 101 */
+-	{ 73, 2, 179,   0,       0,  19,     0,   0,  37,   CT_COPPER_ORE   }, /* 102 */
+-	{ 47, 2, 199,   0,       0,  25,     0,   0,  32,   CT_WATER        }, /* 103 */
+-	{ 48, 2, 182,   0,       0,  18,     0,   0,  32,   CT_FRUIT        }, /* 104 */
+-	{ 49, 2, 185,   0,       0,  19,     0,   0,  28,   CT_RUBBER       }, /* 105 */
+-	{ 50, 2, 176,   0,       0,  19,     0,   0,  37,   CT_SUGAR        }, /* 106 */
+-	{ 51, 2, 178,   0,       0,  20,     0,   0,  37,   CT_COTTON_CANDY }, /* 107 */
+-	{ 52, 2, 192,   0,       0,  20,     0,   0,  37,   CT_TOFFEE       }, /* 108 */
+-	{ 53, 2, 190,   0,       0,  21,     0,   0,  27,   CT_BUBBLES      }, /* 109 */
+-	{ 54, 2, 182,   0,       0,  24,     0,   0,  32,   CT_COLA         }, /* 110 */
+-	{ 55, 2, 181,   0,       0,  21,     0,   0,  32,   CT_CANDY        }, /* 111 */
+-	{ 56, 2, 183,   0,       0,  21,     0,   0,  27,   CT_TOYS         }, /* 112 */
+-	{ 57, 2, 196,   0,       0,  18,     0,   0,  29,   CT_BATTERIES    }, /* 113 */
+-	{ 58, 2, 193,   0,       0,  18,     0,   0,  32,   CT_FIZZY_DRINKS }, /* 114 */
+-	{ 59, 2, 191,   0,       0,  18,     0,   0,  37,   CT_PLASTIC      }, /* 115 */
++	// image_index  max_speed (kph)      running_cost_base									loading speed (0 means default)
++	// |  flags     |        power (hp)  |    running_cost_class						|
++	// |  |    base_cost     |    weight |    |    capacity									|
++	// |  |    |    |        |    |      |    |    |    cargo_type					|
++	// |  |    |    |        |    |      |    |    |    |										|
++	{  2, 0,   7,  64,     300,  47,    50,   0,   0,   0               ,		0	}, /*   0 */
++	{ 19, 0,   8,  80,     600,  65,    65,   1,   0,   0               ,		0	}, /*   1 */
++	{  2, 0,  10,  72,     400,  85,    90,   0,   0,   0               ,		0	}, /*   2 */
++	{  0, 0,  15,  96,     900, 130,   130,   0,   0,   0               ,		0	}, /*   3 */
++	{  1, 0,  19, 112,    1000, 140,   145,   0,   0,   0               ,		0	}, /*   4 */
++	{ 12, 0,  16, 120,    1400,  95,   125,   1,   0,   0               ,		0	}, /*   5 */
++	{ 14, 0,  20, 152,    2000, 120,   135,   1,   0,   0               ,		0	}, /*   6 */
++	{  3, 0,  14,  88,    1100, 145,   130,   0,   0,   0               ,		0	}, /*   7 */
++	{  0, 0,  13, 112,    1000, 131,   120,   0,   0,   0               ,		0	}, /*   8 */
++	{  1, 0,  19, 128,    1200, 162,   140,   0,   0,   0               ,		0	}, /*   9 */
++	{  0, 0,  22, 144,    1600, 170,   130,   0,   0,   0               ,		0	}, /*  10 */
++	{  8, 1,  11, 112,   600/2,  32,  85/2,   1,  38,   CT_PASSENGERS   ,		0	}, /*  11 */
++	{ 10, 1,  14, 120,   700/2,  38,  70/2,   1,  40,   CT_PASSENGERS   ,		0	}, /*  12 */
++	{  4, 0,  15, 128,    1250,  72,    95,   1,   0,   0               ,		0	}, /*  13 */
++	{  5, 0,  17, 144,    1750, 101,   120,   1,   0,   0               ,		0	}, /*  14 */
++	{  4, 0,  18, 160,    2580, 112,   140,   1,   0,   0               ,		0	}, /*  15 */
++	{ 14, 0,  23,  96,    4000, 150,   135,   1,   0,   0               ,		0	}, /*  16 */
++	{ 12, 0,  16, 112,    2400, 120,   105,   1,   0,   0               ,		0	}, /*  17 */
++	{ 13, 0,  30, 112,    6600, 207,   155,   1,   0,   0               ,		0	}, /*  18 */
++	{ 15, 0,  18, 104,    1500, 110,   105,   1,   0,   0               ,		0	}, /*  19 */
++	{ 16, 1,  35, 160,  3500/2,  95, 205/2,   1,   0,   0               ,		0	}, /*  20 */
++	{ 18, 0,  21, 104,    2200, 120,   145,   1,   0,   0               ,		0	}, /*  21 */
++	{  6, 1,  20, 200,  4500/2,  70, 190/2,   1,   4,   CT_MAIL         ,		0	}, /*  22 */
++	{ 20, 0,  26, 160,    3600,  84,   180,   2,   0,   0               ,		0	}, /*  23 */
++	{ 20, 0,  30, 176,    5000,  82,   205,   2,   0,   0               ,		0	}, /*  24 */
++	{ 21, 1,  40, 240,  7000/2,  90, 240/2,   2,   0,   0               ,		0	}, /*  25 */
++	{ 23, 1,  43, 264,  8000/2,  95, 250/2,   2,   0,   0               ,		0	}, /*  26 */
++	{ 33, 2, 247,   0,       0,  25,     0,   0,  40,   CT_PASSENGERS   ,		0	}, /*  27 */
++	{ 35, 2, 228,   0,       0,  21,     0,   0,  30,   CT_MAIL         ,		0	}, /*  28 */
++	{ 34, 2, 176,   0,       0,  18,     0,   0,  30,   CT_COAL         ,		0	}, /*  29 */
++	{ 36, 2, 200,   0,       0,  24,     0,   0,  30,   CT_OIL          ,		0	}, /*  30 */
++	{ 37, 2, 192,   0,       0,  20,     0,   0,  25,   CT_LIVESTOCK    ,		0	}, /*  31 */
++	{ 38, 2, 190,   0,       0,  21,     0,   0,  25,   CT_GOODS        ,		0	}, /*  32 */
++	{ 39, 2, 182,   0,       0,  19,     0,   0,  30,   CT_GRAIN        ,		0	}, /*  33 */
++	{ 40, 2, 181,   0,       0,  16,     0,   0,  30,   CT_WOOD         ,		0	}, /*  34 */
++	{ 41, 2, 179,   0,       0,  19,     0,   0,  30,   CT_IRON_ORE     ,		0	}, /*  35 */
++	{ 42, 2, 196,   0,       0,  18,     0,   0,  20,   CT_STEEL        ,	  0 }, /*  36 */
++	{ 43, 2, 255,   0,       0,  30,     0,   0,  20,   CT_VALUABLES    ,		0	}, /*  37 */
++	{ 44, 2, 191,   0,       0,  22,     0,   0,  25,   CT_FOOD         ,		0	}, /*  38 */
++	{ 45, 2, 196,   0,       0,  18,     0,   0,  20,   CT_PAPER        ,		0	}, /*  39 */
++	{ 46, 2, 179,   0,       0,  19,     0,   0,  30,   CT_COPPER_ORE   ,		0	}, /*  40 */
++	{ 47, 2, 199,   0,       0,  25,     0,   0,  25,   CT_WATER        ,		0	}, /*  41 */
++	{ 48, 2, 182,   0,       0,  18,     0,   0,  25,   CT_FRUIT        ,		0	}, /*  42 */
++	{ 49, 2, 185,   0,       0,  19,     0,   0,  21,   CT_RUBBER       ,		0	}, /*  43 */
++	{ 50, 2, 176,   0,       0,  19,     0,   0,  30,   CT_SUGAR        ,		0	}, /*  44 */
++	{ 51, 2, 178,   0,       0,  20,     0,   0,  30,   CT_COTTON_CANDY ,		0	}, /*  45 */
++	{ 52, 2, 192,   0,       0,  20,     0,   0,  30,   CT_TOFFEE       ,		0	}, /*  46 */
++	{ 53, 2, 190,   0,       0,  21,     0,   0,  20,   CT_BUBBLES      ,		0	}, /*  47 */
++	{ 54, 2, 182,   0,       0,  24,     0,   0,  25,   CT_COLA         ,		0	}, /*  48 */
++	{ 55, 2, 181,   0,       0,  21,     0,   0,  25,   CT_CANDY        ,		0	}, /*  49 */
++	{ 56, 2, 183,   0,       0,  21,     0,   0,  20,   CT_TOYS         ,		0	}, /*  50 */
++	{ 57, 2, 196,   0,       0,  18,     0,   0,  22,   CT_BATTERIES    ,		0	}, /*  51 */
++	{ 58, 2, 193,   0,       0,  18,     0,   0,  25,   CT_FIZZY_DRINKS ,		0	}, /*  52 */
++	{ 59, 2, 191,   0,       0,  18,     0,   0,  30,   CT_PLASTIC      ,		0	}, /*  53 */
++	{ 25, 0,  52, 304,    9000,  95,   230,   2,   0,   0               ,		0 }, /*  54 */
++	{ 26, 1,  60, 336, 10000/2,  85, 240/2,   2,  25,   CT_PASSENGERS   ,		0	}, /*  55 */
++	{ 26, 0,  53, 320,    5000,  95,   230,   2,   0,   0               ,		0 }, /*  56 */
++	{ 60, 2, 247,   0,       0,  25,     0,   0,  45,   CT_PASSENGERS   ,		0	}, /*  57 */
++	{ 62, 2, 228,   0,       0,  21,     0,   0,  35,   CT_MAIL         ,		0	}, /*  58 */
++	{ 61, 2, 176,   0,       0,  18,     0,   0,  35,   CT_COAL         ,		0	}, /*  59 */
++	{ 63, 2, 200,   0,       0,  24,     0,   0,  35,   CT_OIL          ,		0	}, /*  60 */
++	{ 64, 2, 192,   0,       0,  20,     0,   0,  30,   CT_LIVESTOCK    ,		0	}, /*  61 */
++	{ 65, 2, 190,   0,       0,  21,     0,   0,  30,   CT_GOODS        ,		0	}, /*  62 */
++	{ 66, 2, 182,   0,       0,  19,     0,   0,  35,   CT_GRAIN        ,		0	}, /*  63 */
++	{ 67, 2, 181,   0,       0,  16,     0,   0,  35,   CT_WOOD         ,		0	}, /*  64 */
++	{ 68, 2, 179,   0,       0,  19,     0,   0,  35,   CT_IRON_ORE     ,		0	}, /*  65 */
++	{ 69, 2, 196,   0,       0,  18,     0,   0,  25,   CT_STEEL        ,		0 }, /*  66 */
++	{ 70, 2, 255,   0,       0,  30,     0,   0,  25,   CT_VALUABLES    ,		0	}, /*  67 */
++	{ 71, 2, 191,   0,       0,  22,     0,   0,  30,   CT_FOOD         ,		0	}, /*  68 */
++	{ 72, 2, 196,   0,       0,  18,     0,   0,  25,   CT_PAPER        ,		0	}, /*  69 */
++	{ 73, 2, 179,   0,       0,  19,     0,   0,  35,   CT_COPPER_ORE   ,		0	}, /*  70 */
++	{ 47, 2, 199,   0,       0,  25,     0,   0,  30,   CT_WATER        ,		0	}, /*  71 */
++	{ 48, 2, 182,   0,       0,  18,     0,   0,  30,   CT_FRUIT        ,		0	}, /*  72 */
++	{ 49, 2, 185,   0,       0,  19,     0,   0,  26,   CT_RUBBER       ,		0	}, /*  73 */
++	{ 50, 2, 176,   0,       0,  19,     0,   0,  35,   CT_SUGAR        ,		0	}, /*  74 */
++	{ 51, 2, 178,   0,       0,  20,     0,   0,  35,   CT_COTTON_CANDY ,		0	}, /*  75 */
++	{ 52, 2, 192,   0,       0,  20,     0,   0,  35,   CT_TOFFEE       ,		0	}, /*  76 */
++	{ 53, 2, 190,   0,       0,  21,     0,   0,  25,   CT_BUBBLES      ,		0	}, /*  77 */
++	{ 54, 2, 182,   0,       0,  24,     0,   0,  30,   CT_COLA         ,		0	}, /*  78 */
++	{ 55, 2, 181,   0,       0,  21,     0,   0,  30,   CT_CANDY        ,		0	}, /*  79 */
++	{ 56, 2, 183,   0,       0,  21,     0,   0,  25,   CT_TOYS         ,		0 }, /*  80 */
++	{ 57, 2, 196,   0,       0,  18,     0,   0,  27,   CT_BATTERIES    ,		0	}, /*  81 */
++	{ 58, 2, 193,   0,       0,  18,     0,   0,  30,   CT_FIZZY_DRINKS ,		0	}, /*  82 */
++	{ 59, 2, 191,   0,       0,  18,     0,   0,  35,   CT_PLASTIC      ,		0	}, /*  83 */
++	{ 28, 0,  70, 400,   10000, 105,   250,   2,   0,   0               ,		0 }, /*  84 */
++	{ 29, 0,  74, 448,   12000, 120,   253,   2,   0,   0               ,		0	}, /*  85 */
++	{ 30, 0,  82, 480,   15000, 130,   254,   2,   0,   0               ,		0	}, /*  86 */
++	{ 31, 1,  95, 640, 20000/2, 150, 255/2,   2,   0,   0               ,		0	}, /*  87 */
++	{ 28, 0,  70, 480,   10000, 120,   250,   2,   0,   0               ,		0	}, /*  88 */
++	{ 60, 2, 247,   0,       0,  25,     0,   0,  47,   CT_PASSENGERS   ,		0	}, /*  89 */
++	{ 62, 2, 228,   0,       0,  21,     0,   0,  37,   CT_MAIL         ,		0	}, /*  90 */
++	{ 61, 2, 176,   0,       0,  18,     0,   0,  37,   CT_COAL         ,		0	}, /*  91 */
++	{ 63, 2, 200,   0,       0,  24,     0,   0,  37,   CT_OIL          ,		0	}, /*  92 */
++	{ 64, 2, 192,   0,       0,  20,     0,   0,  32,   CT_LIVESTOCK    ,		0	}, /*  93 */
++	{ 65, 2, 190,   0,       0,  21,     0,   0,  32,   CT_GOODS        ,		0	}, /*  94 */
++	{ 66, 2, 182,   0,       0,  19,     0,   0,  37,   CT_GRAIN        ,		0	}, /*  95 */
++	{ 67, 2, 181,   0,       0,  16,     0,   0,  37,   CT_WOOD         ,		0	}, /*  96 */
++	{ 68, 2, 179,   0,       0,  19,     0,   0,  37,   CT_IRON_ORE     ,		0	}, /*  97 */
++	{ 69, 2, 196,   0,       0,  18,     0,   0,  27,   CT_STEEL        ,		0	}, /*  98 */
++	{ 70, 2, 255,   0,       0,  30,     0,   0,  27,   CT_VALUABLES    ,		0	}, /*  99 */
++	{ 71, 2, 191,   0,       0,  22,     0,   0,  32,   CT_FOOD         ,		0	}, /* 100 */
++	{ 72, 2, 196,   0,       0,  18,     0,   0,  27,   CT_PAPER        ,		0	}, /* 101 */
++	{ 73, 2, 179,   0,       0,  19,     0,   0,  37,   CT_COPPER_ORE   ,		0	}, /* 102 */
++	{ 47, 2, 199,   0,       0,  25,     0,   0,  32,   CT_WATER        ,		0	}, /* 103 */
++	{ 48, 2, 182,   0,       0,  18,     0,   0,  32,   CT_FRUIT        ,		0	}, /* 104 */
++	{ 49, 2, 185,   0,       0,  19,     0,   0,  28,   CT_RUBBER       ,		0	}, /* 105 */
++	{ 50, 2, 176,   0,       0,  19,     0,   0,  37,   CT_SUGAR        ,		0	}, /* 106 */
++	{ 51, 2, 178,   0,       0,  20,     0,   0,  37,   CT_COTTON_CANDY ,		0	}, /* 107 */
++	{ 52, 2, 192,   0,       0,  20,     0,   0,  37,   CT_TOFFEE       ,		0	}, /* 108 */
++	{ 53, 2, 190,   0,       0,  21,     0,   0,  27,   CT_BUBBLES      ,		0	}, /* 109 */
++	{ 54, 2, 182,   0,       0,  24,     0,   0,  32,   CT_COLA         ,		0	}, /* 110 */
++	{ 55, 2, 181,   0,       0,  21,     0,   0,  32,   CT_CANDY        ,		0	}, /* 111 */
++	{ 56, 2, 183,   0,       0,  21,     0,   0,  27,   CT_TOYS         ,		0	}, /* 112 */
++	{ 57, 2, 196,   0,       0,  18,     0,   0,  29,   CT_BATTERIES    ,		0	}, /* 113 */
++	{ 58, 2, 193,   0,       0,  18,     0,   0,  32,   CT_FIZZY_DRINKS ,		0	}, /* 114 */
++	{ 59, 2, 191,   0,       0,  18,     0,   0,  37,   CT_PLASTIC      ,		0	}, /* 115 */
+ };
+ 
+ ShipVehicleInfo _ship_vehicle_info[NUM_SHIP_ENGINES] = {
+ 	// image_index  cargo_type     cargo_amount                 refittable
+-	// |  base_cost |              |    running_cost            |
+-	// |  |    max_speed           |    |    sfx                |
+-	// |  |    |    |              |    |    |                  |
+-	{  1, 160, 48,  CT_OIL,        220, 140, SND_06_SHIP_HORN,  0 }, /*  0 */
+-	{  1, 176, 80,  CT_OIL,        350, 125, SND_06_SHIP_HORN,  0 }, /*  1 */
+-	{  2, 96,  64,  CT_PASSENGERS, 100, 90,  SND_07_FERRY_HORN, 0 }, /*  2 */
+-	{  2, 112, 128, CT_PASSENGERS, 130, 80,  SND_07_FERRY_HORN, 0 }, /*  3 */
+-	{  3, 148, 224, CT_PASSENGERS, 100, 190, SND_07_FERRY_HORN, 0 }, /*  4 */
+-	{  2, 96,  64,  CT_PASSENGERS, 100, 90,  SND_07_FERRY_HORN, 0 }, /*  5 */
+-	{  2, 112, 128, CT_PASSENGERS, 130, 80,  SND_07_FERRY_HORN, 0 }, /*  6 */
+-	{  0, 128, 48,  CT_GOODS,      160, 150, SND_06_SHIP_HORN,  1 }, /*  7 */
+-	{  0, 144, 80,  CT_GOODS,      190, 113, SND_06_SHIP_HORN,  1 }, /*  8 */
+-	{  0, 128, 48,  CT_GOODS,      160, 150, SND_06_SHIP_HORN,  1 }, /*  9 */
+-	{  0, 144, 80,  CT_GOODS,      190, 113, SND_06_SHIP_HORN,  1 }, /* 10 */
++	// |  base_cost |              |    running_cost            |			loading_speed
++	// |  |    max_speed           |    |    sfx                |			|
++	// |  |    |    |              |    |    |                  |			|
++	{  1, 160, 48,  CT_OIL,        220, 140, SND_06_SHIP_HORN,  0 ,		0	}, /*  0 */
++	{  1, 176, 80,  CT_OIL,        350, 125, SND_06_SHIP_HORN,  0 ,		0 }, /*  1 */
++	{  2, 96,  64,  CT_PASSENGERS, 100, 90,  SND_07_FERRY_HORN, 0 ,		0 }, /*  2 */
++	{  2, 112, 128, CT_PASSENGERS, 130, 80,  SND_07_FERRY_HORN, 0 ,		0 }, /*  3 */
++	{  3, 148, 224, CT_PASSENGERS, 100, 190, SND_07_FERRY_HORN, 0 ,		0 }, /*  4 */
++	{  2, 96,  64,  CT_PASSENGERS, 100, 90,  SND_07_FERRY_HORN, 0 ,		0 }, /*  5 */
++	{  2, 112, 128, CT_PASSENGERS, 130, 80,  SND_07_FERRY_HORN, 0 ,		0 }, /*  6 */
++	{  0, 128, 48,  CT_GOODS,      160, 150, SND_06_SHIP_HORN,  1 ,		0 }, /*  7 */
++	{  0, 144, 80,  CT_GOODS,      190, 113, SND_06_SHIP_HORN,  1 ,		0 }, /*  8 */
++	{  0, 128, 48,  CT_GOODS,      160, 150, SND_06_SHIP_HORN,  1 ,		0 }, /*  9 */
++	{  0, 144, 80,  CT_GOODS,      190, 113, SND_06_SHIP_HORN,  1 ,		0 }, /* 10 */
+ };
+ 
+ /* subtype: &1: regular aircraft (else chopper); &2: crashes easily on small airports */
+ /* sfx from somewhere around SND_45_PLANE_CRASHING are toyland plane-sounds */
+ AircraftVehicleInfo _aircraft_vehicle_info[NUM_AIRCRAFT_ENGINES] = {
+-	// image_index         sfx                         acceleration
+-	// |   base_cost       |                           |   max_speed
++	// image_index         sfx                         acceleration				loading_speed (0 means default)
++	// |   base_cost       |                           |   max_speed			|
+ 	// |   |    running_cost                           |   |    mail_capacity
+ 	// |   |    |  subtype |                           |   |    |    passanger_capacity
+-	// |   |    |  |       |                           |   |    |    |
+-	{  1, 14,  85, 1, SND_08_PLANE_TAKE_OFF,          18,  37,  4,  25 }, /*  0 */
+-	{  0, 15, 100, 1, SND_08_PLANE_TAKE_OFF,          20,  37,  8,  65 }, /*  1 */
+-	{  2, 16, 130, 3, SND_09_JET,                     35,  74, 10,  90 }, /*  2 */
+-	{  8, 75, 250, 3, SND_3B_JET_OVERHEAD,            50, 181, 20, 100 }, /*  3 */
+-	{  5, 15,  98, 1, SND_08_PLANE_TAKE_OFF,          20,  37,  6,  30 }, /*  4 */
+-	{  6, 18, 240, 3, SND_09_JET,                     40,  74, 30, 200 }, /*  5 */
+-	{  2, 17, 150, 1, SND_09_JET,                     35,  74, 15, 100 }, /*  6 */
+-	{  2, 18, 245, 3, SND_09_JET,                     40,  74, 30, 150 }, /*  7 */
+-	{	 3, 19, 192, 3, SND_09_JET,                     40,  74, 40, 220 }, /*  8 */
+-	{  3, 20, 190, 3, SND_09_JET,                     40,  74, 25, 230 }, /*  9 */
+-	{  2, 16, 135, 3, SND_09_JET,                     35,  74, 10,  95 }, /* 10 */
+-	{  2, 18, 240, 3, SND_09_JET,                     40,  74, 35, 170 }, /* 11 */
+-	{  4, 17, 155, 3, SND_09_JET,                     40,  74, 15, 110 }, /* 12 */
+-	{  7, 30, 253, 3, SND_3D_ANOTHER_JET_OVERHEAD,    40,  74, 50, 300 }, /* 13 */
+-	{  4, 18, 210, 3, SND_09_JET,                     40,  74, 25, 200 }, /* 14 */
+-	{  4, 19, 220, 3, SND_09_JET,                     40,  74, 25, 240 }, /* 15 */
+-	{  4, 27, 230, 3, SND_09_JET,                     40,  74, 40, 260 }, /* 16 */
+-	{  3, 25, 225, 3, SND_09_JET,                     40,  74, 35, 240 }, /* 17 */
+-	{  4, 20, 235, 3, SND_09_JET,                     40,  74, 30, 260 }, /* 18 */
+-	{  4, 19, 220, 3, SND_09_JET,                     40,  74, 25, 210 }, /* 19 */
+-	{  4, 18, 170, 3, SND_09_JET,                     40,  74, 20, 160 }, /* 20 */
+-	{  4, 26, 210, 3, SND_09_JET,                     40,  74, 20, 220 }, /* 21 */
+-	{  6, 16, 125, 1, SND_09_JET,                     50,  74, 10,  80 }, /* 22 */
+-	{  2, 17, 145, 1, SND_09_JET,                     40,  74, 10,  85 }, /* 23 */
+-	{ 11, 16, 130, 3, SND_09_JET,                     40,  74, 10,  75 }, /* 24 */
+-	{ 10, 16, 149, 3, SND_09_JET,                     40,  74, 10,  85 }, /* 25 */
+-	{ 15, 17, 170, 3, SND_09_JET,                     40,  74, 18,  65 }, /* 26 */
+-	{ 12, 18, 210, 3, SND_09_JET,                     40,  74, 25, 110 }, /* 27 */
+-	{ 13, 20, 230, 3, SND_09_JET,                     40,  74, 60, 180 }, /* 28 */
+-	{ 14, 21, 220, 3, SND_09_JET,                     40,  74, 65, 150 }, /* 29 */
+-	{ 16, 19, 160, 3, SND_09_JET,                     40, 181, 45,  85 }, /* 30 */
+-	{ 17, 24, 248, 3, SND_3D_ANOTHER_JET_OVERHEAD,    40,  74, 80, 400 }, /* 31 */
+-	{ 18, 80, 251, 3, SND_3B_JET_OVERHEAD,            50, 181, 45, 130 }, /* 32 */
+-	{ 20, 13,  85, 1, SND_45_PLANE_CRASHING,          18,  37,  5,  25 }, /* 33 */
+-	{ 21, 18, 100, 1, SND_46_PLANE_ENGINE_SPUTTERING, 20,  37,  9,  60 }, /* 34 */
+-	{ 22, 25, 140, 1, SND_09_JET,                     40,  74, 12,  90 }, /* 35 */
+-	{ 23, 32, 220, 3, SND_3D_ANOTHER_JET_OVERHEAD,    40,  74, 40, 200 }, /* 36 */
+-	{ 24, 80, 255, 3, SND_3B_JET_OVERHEAD,            50, 181, 30, 100 }, /* 37 */
+-	{  9, 15,  81, 0, SND_09_JET,                     20,  25, 15,  40 }, /* 38 */
+-	{ 19, 17,  77, 0, SND_09_JET,                     20,  40, 20,  55 }, /* 39 */
+-	{ 25, 15,  80, 0, SND_09_JET,                     20,  25, 10,  40 }, /* 40 */
++	// |   |    |  |       |                           |   |    |    |		|
++	{  1, 14,  85, 1, SND_08_PLANE_TAKE_OFF,          18,  37,  4,  25 ,  0 }, /*  0 */
++	{  0, 15, 100, 1, SND_08_PLANE_TAKE_OFF,          20,  37,  8,  65 ,  0 }, /*  1 */
++	{  2, 16, 130, 3, SND_09_JET,                     35,  74, 10,  90 ,  0 }, /*  2 */
++	{  8, 75, 250, 3, SND_3B_JET_OVERHEAD,            50, 181, 20, 100 ,  0 }, /*  3 */
++	{  5, 15,  98, 1, SND_08_PLANE_TAKE_OFF,          20,  37,  6,  30 ,  0 }, /*  4 */
++	{  6, 18, 240, 3, SND_09_JET,                     40,  74, 30, 200 ,  0 }, /*  5 */
++	{  2, 17, 150, 1, SND_09_JET,                     35,  74, 15, 100 ,  0 }, /*  6 */
++	{  2, 18, 245, 3, SND_09_JET,                     40,  74, 30, 150 ,  0 }, /*  7 */
++	{	 3, 19, 192, 3, SND_09_JET,                     40,  74, 40, 220 ,  0 }, /*  8 */
++	{  3, 20, 190, 3, SND_09_JET,                     40,  74, 25, 230 ,  0 }, /*  9 */
++	{  2, 16, 135, 3, SND_09_JET,                     35,  74, 10,  95 ,  0 }, /* 10 */
++	{  2, 18, 240, 3, SND_09_JET,                     40,  74, 35, 170 ,  0 }, /* 11 */
++	{  4, 17, 155, 3, SND_09_JET,                     40,  74, 15, 110 ,  0 }, /* 12 */
++	{  7, 30, 253, 3, SND_3D_ANOTHER_JET_OVERHEAD,    40,  74, 50, 300 ,  0 }, /* 13 */
++	{  4, 18, 210, 3, SND_09_JET,                     40,  74, 25, 200 ,  0 }, /* 14 */
++	{  4, 19, 220, 3, SND_09_JET,                     40,  74, 25, 240 ,  0 }, /* 15 */
++	{  4, 27, 230, 3, SND_09_JET,                     40,  74, 40, 260 ,  0 }, /* 16 */
++	{  3, 25, 225, 3, SND_09_JET,                     40,  74, 35, 240 ,  0 }, /* 17 */
++	{  4, 20, 235, 3, SND_09_JET,                     40,  74, 30, 260 ,  0 }, /* 18 */
++	{  4, 19, 220, 3, SND_09_JET,                     40,  74, 25, 210 ,  0 }, /* 19 */
++	{  4, 18, 170, 3, SND_09_JET,                     40,  74, 20, 160 ,  0 }, /* 20 */
++	{  4, 26, 210, 3, SND_09_JET,                     40,  74, 20, 220 ,  0 }, /* 21 */
++	{  6, 16, 125, 1, SND_09_JET,                     50,  74, 10,  80 ,  0 }, /* 22 */
++	{  2, 17, 145, 1, SND_09_JET,                     40,  74, 10,  85 ,  0 }, /* 23 */
++	{ 11, 16, 130, 3, SND_09_JET,                     40,  74, 10,  75 ,  0 }, /* 24 */
++	{ 10, 16, 149, 3, SND_09_JET,                     40,  74, 10,  85 ,  0 }, /* 25 */
++	{ 15, 17, 170, 3, SND_09_JET,                     40,  74, 18,  65 ,  0 }, /* 26 */
++	{ 12, 18, 210, 3, SND_09_JET,                     40,  74, 25, 110 ,  0 }, /* 27 */
++	{ 13, 20, 230, 3, SND_09_JET,                     40,  74, 60, 180 ,  0 }, /* 28 */
++	{ 14, 21, 220, 3, SND_09_JET,                     40,  74, 65, 150 ,  0 }, /* 29 */
++	{ 16, 19, 160, 3, SND_09_JET,                     40, 181, 45,  85 ,  0 }, /* 30 */
++	{ 17, 24, 248, 3, SND_3D_ANOTHER_JET_OVERHEAD,    40,  74, 80, 400 ,  0 }, /* 31 */
++	{ 18, 80, 251, 3, SND_3B_JET_OVERHEAD,            50, 181, 45, 130 ,  0 }, /* 32 */
++	{ 20, 13,  85, 1, SND_45_PLANE_CRASHING,          18,  37,  5,  25 ,  0 }, /* 33 */
++	{ 21, 18, 100, 1, SND_46_PLANE_ENGINE_SPUTTERING, 20,  37,  9,  60 ,  0 }, /* 34 */
++	{ 22, 25, 140, 1, SND_09_JET,                     40,  74, 12,  90 ,  0 }, /* 35 */
++	{ 23, 32, 220, 3, SND_3D_ANOTHER_JET_OVERHEAD,    40,  74, 40, 200 ,  0 }, /* 36 */
++	{ 24, 80, 255, 3, SND_3B_JET_OVERHEAD,            50, 181, 30, 100 ,  0 }, /* 37 */
++	{  9, 15,  81, 0, SND_09_JET,                     20,  25, 15,  40 ,  0 }, /* 38 */
++	{ 19, 17,  77, 0, SND_09_JET,                     20,  40, 20,  55 ,  0 }, /* 39 */
++	{ 25, 15,  80, 0, SND_09_JET,                     20,  25, 10,  40 ,  0 }, /* 40 */
+ };
+ 
+ /* I hope I got the cargo types right, figuring out which is which for which
+  * climate is a bitch */
+ RoadVehicleInfo _road_vehicle_info[NUM_ROAD_ENGINES] = {
+-	// image_index       sfx                                 max_speed
+-	// |    base_cost    |                                   |   capacity
+-	// |    |    running_cost                                |   |  cargo_type
+-	// |    |    |       |                                   |   |  |
+-	{  0, 120,  91, SND_19_BUS_START_PULL_AWAY,            112, 31, CT_PASSENGERS   }, /*  0 */
+-	{ 17, 140, 128, SND_1C_TRUCK_START_2,                  176, 35, CT_PASSENGERS   }, /*  1 */
+-	{ 17, 150, 178, SND_1B_TRUCK_START,                    224, 37, CT_PASSENGERS   }, /*  2 */
+-	{ 34, 160, 240, SND_1B_TRUCK_START,                    255, 40, CT_PASSENGERS   }, /*  3 */
+-	{ 51, 120,  91, SND_3C_COMEDY_CAR,                     112, 30, CT_PASSENGERS   }, /*  4 */
+-	{ 51, 140, 171, SND_3E_COMEDY_CAR_2,                   192, 35, CT_PASSENGERS   }, /*  5 */
+-	{ 51, 160, 240, SND_3C_COMEDY_CAR,                     240, 38, CT_PASSENGERS   }, /*  6 */
+-	{  1, 108,  90, SND_19_BUS_START_PULL_AWAY,             96, 20, CT_COAL         }, /*  7 */
+-	{ 18, 128, 168, SND_19_BUS_START_PULL_AWAY,            176, 25, CT_COAL         }, /*  8 */
+-	{ 35, 138, 240, SND_19_BUS_START_PULL_AWAY,            224, 28, CT_COAL         }, /*  9 */
+-	{  2, 115,  90, SND_19_BUS_START_PULL_AWAY,             96, 22, CT_MAIL         }, /* 10 */
+-	{ 19, 135, 168, SND_19_BUS_START_PULL_AWAY,            176, 28, CT_MAIL         }, /* 11 */
+-	{ 36, 145, 240, SND_19_BUS_START_PULL_AWAY,            224, 30, CT_MAIL         }, /* 12 */
+-	{ 57, 115,  90, SND_3E_COMEDY_CAR_2,                    96, 22, CT_MAIL         }, /* 13 */
+-	{ 57, 135, 168, SND_3C_COMEDY_CAR,                     176, 28, CT_MAIL         }, /* 14 */
+-	{ 57, 145, 240, SND_3E_COMEDY_CAR_2,                   224, 30, CT_MAIL         }, /* 15 */
+-	{  3, 110,  90, SND_19_BUS_START_PULL_AWAY,             96, 21, CT_OIL          }, /* 16 */
+-	{ 20, 140, 168, SND_19_BUS_START_PULL_AWAY,            176, 25, CT_OIL          }, /* 17 */
+-	{ 37, 150, 240, SND_19_BUS_START_PULL_AWAY,            224, 27, CT_OIL          }, /* 18 */
+-	{  4, 105,  90, SND_19_BUS_START_PULL_AWAY,             96, 14, CT_LIVESTOCK    }, /* 19 */
+-	{ 21, 130, 168, SND_19_BUS_START_PULL_AWAY,            176, 16, CT_LIVESTOCK    }, /* 20 */
+-	{ 38, 140, 240, SND_19_BUS_START_PULL_AWAY,            224, 18, CT_LIVESTOCK    }, /* 21 */
+-	{  5, 107,  90, SND_19_BUS_START_PULL_AWAY,             96, 14, CT_GOODS        }, /* 22 */
+-	{ 22, 130, 168, SND_19_BUS_START_PULL_AWAY,            176, 16, CT_GOODS        }, /* 23 */
+-	{ 39, 140, 240, SND_19_BUS_START_PULL_AWAY,            224, 18, CT_GOODS        }, /* 24 */
+-	{  6, 114,  90, SND_19_BUS_START_PULL_AWAY,             96, 20, CT_GRAIN        }, /* 25 */
+-	{ 23, 133, 168, SND_19_BUS_START_PULL_AWAY,            176, 25, CT_GRAIN        }, /* 26 */
+-	{ 40, 143, 240, SND_19_BUS_START_PULL_AWAY,            224, 30, CT_GRAIN        }, /* 27 */
+-	{  7, 118,  90, SND_19_BUS_START_PULL_AWAY,             96, 20, CT_WOOD         }, /* 28 */
+-	{ 24, 137, 168, SND_19_BUS_START_PULL_AWAY,            176, 22, CT_WOOD         }, /* 29 */
+-	{ 41, 147, 240, SND_19_BUS_START_PULL_AWAY,            224, 24, CT_WOOD         }, /* 30 */
+-	{  8, 121,  90, SND_19_BUS_START_PULL_AWAY,             96, 22, CT_IRON_ORE     }, /* 31 */
+-	{ 25, 140, 168, SND_19_BUS_START_PULL_AWAY,            176, 25, CT_IRON_ORE     }, /* 32 */
+-	{ 42, 150, 240, SND_19_BUS_START_PULL_AWAY,            224, 27, CT_IRON_ORE     }, /* 33 */
+-	{  9, 112,  90, SND_19_BUS_START_PULL_AWAY,             96, 15, CT_STEEL        }, /* 34 */
+-	{ 26, 135, 168, SND_19_BUS_START_PULL_AWAY,            176, 18, CT_STEEL        }, /* 35 */
+-	{ 43, 145, 240, SND_19_BUS_START_PULL_AWAY,            224, 20, CT_STEEL        }, /* 36 */
+-	{ 10, 145,  90, SND_19_BUS_START_PULL_AWAY,             96, 12, CT_VALUABLES    }, /* 37 */
+-	{ 27, 170, 168, SND_19_BUS_START_PULL_AWAY,            176, 15, CT_VALUABLES    }, /* 38 */
+-	{ 44, 180, 240, SND_19_BUS_START_PULL_AWAY,            224, 16, CT_VALUABLES    }, /* 39 */
+-	{ 11, 112,  90, SND_19_BUS_START_PULL_AWAY,             96, 17, CT_FOOD         }, /* 40 */
+-	{ 28, 134, 168, SND_19_BUS_START_PULL_AWAY,            176, 20, CT_FOOD         }, /* 41 */
+-	{ 45, 144, 240, SND_19_BUS_START_PULL_AWAY,            224, 22, CT_FOOD         }, /* 42 */
+-	{ 12, 112,  90, SND_19_BUS_START_PULL_AWAY,             96, 15, CT_PAPER        }, /* 43 */
+-	{ 29, 135, 168, SND_19_BUS_START_PULL_AWAY,            176, 18, CT_PAPER        }, /* 44 */
+-	{ 46, 145, 240, SND_19_BUS_START_PULL_AWAY,            224, 20, CT_PAPER        }, /* 45 */
+-	{ 13, 121,  90, SND_19_BUS_START_PULL_AWAY,             96, 22, CT_COPPER_ORE   }, /* 46 */
+-	{ 30, 140, 168, SND_19_BUS_START_PULL_AWAY,            176, 25, CT_COPPER_ORE   }, /* 47 */
+-	{ 47, 150, 240, SND_19_BUS_START_PULL_AWAY,            224, 27, CT_COPPER_ORE   }, /* 48 */
+-	{ 14, 111,  90, SND_19_BUS_START_PULL_AWAY,             96, 21, CT_WATER        }, /* 49 */
+-	{ 31, 141, 168, SND_19_BUS_START_PULL_AWAY,            176, 25, CT_WATER        }, /* 50 */
+-	{ 48, 151, 240, SND_19_BUS_START_PULL_AWAY,            224, 27, CT_WATER        }, /* 51 */
+-	{ 15, 118,  90, SND_19_BUS_START_PULL_AWAY,             96, 18, CT_FRUIT        }, /* 52 */
+-	{ 32, 148, 168, SND_19_BUS_START_PULL_AWAY,            176, 20, CT_FRUIT        }, /* 53 */
+-	{ 49, 158, 240, SND_19_BUS_START_PULL_AWAY,            224, 23, CT_FRUIT        }, /* 54 */
+-	{ 16, 117,  90, SND_19_BUS_START_PULL_AWAY,             96, 17, CT_RUBBER       }, /* 55 */
+-	{ 33, 147, 168, SND_19_BUS_START_PULL_AWAY,            176, 19, CT_RUBBER       }, /* 56 */
+-	{ 50, 157, 240, SND_19_BUS_START_PULL_AWAY,            224, 22, CT_RUBBER       }, /* 57 */
+-	{ 52, 117,  90, SND_3F_COMEDY_CAR_3,                    96, 17, CT_SUGAR        }, /* 58 */
+-	{ 52, 147, 168, SND_40_COMEDY_CAR_START_AND_PULL_AWAY, 176, 19, CT_SUGAR        }, /* 59 */
+-	{ 52, 157, 240, SND_3F_COMEDY_CAR_3,                   224, 22, CT_SUGAR        }, /* 60 */
+-	{ 53, 117,  90, SND_40_COMEDY_CAR_START_AND_PULL_AWAY,  96, 17, CT_COLA         }, /* 61 */
+-	{ 53, 147, 168, SND_3F_COMEDY_CAR_3,                   176, 19, CT_COLA         }, /* 62 */
+-	{ 53, 157, 240, SND_40_COMEDY_CAR_START_AND_PULL_AWAY, 224, 22, CT_COLA         }, /* 63 */
+-	{ 54, 117,  90, SND_3F_COMEDY_CAR_3,                    96, 17, CT_COTTON_CANDY }, /* 64 */
+-	{ 54, 147, 168, SND_40_COMEDY_CAR_START_AND_PULL_AWAY, 176, 19, CT_COTTON_CANDY }, /* 65 */
+-	{ 54, 157, 240, SND_3F_COMEDY_CAR_3,                   224, 22, CT_COTTON_CANDY }, /* 66 */
+-	{ 55, 117,  90, SND_40_COMEDY_CAR_START_AND_PULL_AWAY,  96, 17, CT_TOFFEE       }, /* 67 */
+-	{ 55, 147, 168, SND_3F_COMEDY_CAR_3,                   176, 19, CT_TOFFEE       }, /* 68 */
+-	{ 55, 157, 240, SND_40_COMEDY_CAR_START_AND_PULL_AWAY, 224, 22, CT_TOFFEE       }, /* 69 */
+-	{ 56, 117,  90, SND_3F_COMEDY_CAR_3,                    96, 17, CT_TOYS         }, /* 70 */
+-	{ 56, 147, 168, SND_40_COMEDY_CAR_START_AND_PULL_AWAY, 176, 19, CT_TOYS         }, /* 71 */
+-	{ 56, 157, 240, SND_3F_COMEDY_CAR_3,                   224, 22, CT_TOYS         }, /* 72 */
+-	{ 58, 117,  90, SND_40_COMEDY_CAR_START_AND_PULL_AWAY,  96, 17, CT_CANDY        }, /* 73 */
+-	{ 58, 147, 168, SND_3F_COMEDY_CAR_3,                   176, 19, CT_CANDY        }, /* 74 */
+-	{ 58, 157, 240, SND_40_COMEDY_CAR_START_AND_PULL_AWAY, 224, 22, CT_CANDY        }, /* 75 */
+-	{ 59, 117,  90, SND_3F_COMEDY_CAR_3,                    96, 17, CT_BATTERIES    }, /* 76 */
+-	{ 59, 147, 168, SND_40_COMEDY_CAR_START_AND_PULL_AWAY, 176, 19, CT_BATTERIES    }, /* 77 */
+-	{ 59, 157, 240, SND_3F_COMEDY_CAR_3,                   224, 22, CT_BATTERIES    }, /* 78 */
+-	{ 60, 117,  90, SND_40_COMEDY_CAR_START_AND_PULL_AWAY,  96, 17, CT_FIZZY_DRINKS }, /* 79 */
+-	{ 60, 147, 168, SND_3F_COMEDY_CAR_3,                   176, 19, CT_FIZZY_DRINKS }, /* 80 */
+-	{ 60, 157, 240, SND_40_COMEDY_CAR_START_AND_PULL_AWAY, 224, 22, CT_FIZZY_DRINKS }, /* 81 */
+-	{ 61, 117,  90, SND_3F_COMEDY_CAR_3,                    96, 17, CT_PLASTIC      }, /* 82 */
+-	{ 61, 147, 168, SND_40_COMEDY_CAR_START_AND_PULL_AWAY, 176, 19, CT_PLASTIC      }, /* 83 */
+-	{ 61, 157, 240, SND_3F_COMEDY_CAR_3,                   224, 22, CT_PLASTIC      }, /* 84 */
+-	{ 62, 117,  90, SND_40_COMEDY_CAR_START_AND_PULL_AWAY,  96, 17, CT_BUBBLES      }, /* 85 */
+-	{ 62, 147, 168, SND_3F_COMEDY_CAR_3,                   176, 19, CT_BUBBLES      }, /* 86 */
+-	{ 62, 157, 240, SND_40_COMEDY_CAR_START_AND_PULL_AWAY, 224, 22, CT_BUBBLES      }, /* 87 */
++	// image_index       sfx                                 max_speed									loading_speed (0 means default)
++	// |    base_cost    |                                   |   capacity								|
++	// |    |    running_cost                                |   |  cargo_type					|
++	// |    |    |       |                                   |   |  |										|
++	{  0, 120,  91, SND_19_BUS_START_PULL_AWAY,            112, 31, CT_PASSENGERS   ,   0 }, /*  0 */
++	{ 17, 140, 128, SND_1C_TRUCK_START_2,                  176, 35, CT_PASSENGERS   ,   0 }, /*  1 */
++	{ 17, 150, 178, SND_1B_TRUCK_START,                    224, 37, CT_PASSENGERS   ,   0 }, /*  2 */
++	{ 34, 160, 240, SND_1B_TRUCK_START,                    255, 40, CT_PASSENGERS   ,   0 }, /*  3 */
++	{ 51, 120,  91, SND_3C_COMEDY_CAR,                     112, 30, CT_PASSENGERS   ,   0 }, /*  4 */
++	{ 51, 140, 171, SND_3E_COMEDY_CAR_2,                   192, 35, CT_PASSENGERS   ,   0 }, /*  5 */
++	{ 51, 160, 240, SND_3C_COMEDY_CAR,                     240, 38, CT_PASSENGERS   ,   0 }, /*  6 */
++	{  1, 108,  90, SND_19_BUS_START_PULL_AWAY,             96, 20, CT_COAL         ,   0 }, /*  7 */
++	{ 18, 128, 168, SND_19_BUS_START_PULL_AWAY,            176, 25, CT_COAL         ,   0 }, /*  8 */
++	{ 35, 138, 240, SND_19_BUS_START_PULL_AWAY,            224, 28, CT_COAL         ,   0 }, /*  9 */
++	{  2, 115,  90, SND_19_BUS_START_PULL_AWAY,             96, 22, CT_MAIL         ,   0 }, /* 10 */
++	{ 19, 135, 168, SND_19_BUS_START_PULL_AWAY,            176, 28, CT_MAIL         ,   0 }, /* 11 */
++	{ 36, 145, 240, SND_19_BUS_START_PULL_AWAY,            224, 30, CT_MAIL         ,   0 }, /* 12 */
++	{ 57, 115,  90, SND_3E_COMEDY_CAR_2,                    96, 22, CT_MAIL         ,   0 }, /* 13 */
++	{ 57, 135, 168, SND_3C_COMEDY_CAR,                     176, 28, CT_MAIL         ,   0 }, /* 14 */
++	{ 57, 145, 240, SND_3E_COMEDY_CAR_2,                   224, 30, CT_MAIL         ,   0 }, /* 15 */
++	{  3, 110,  90, SND_19_BUS_START_PULL_AWAY,             96, 21, CT_OIL          ,   0 }, /* 16 */
++	{ 20, 140, 168, SND_19_BUS_START_PULL_AWAY,            176, 25, CT_OIL          ,   0 }, /* 17 */
++	{ 37, 150, 240, SND_19_BUS_START_PULL_AWAY,            224, 27, CT_OIL          ,   0 }, /* 18 */
++	{  4, 105,  90, SND_19_BUS_START_PULL_AWAY,             96, 14, CT_LIVESTOCK    ,   0 }, /* 19 */
++	{ 21, 130, 168, SND_19_BUS_START_PULL_AWAY,            176, 16, CT_LIVESTOCK    ,   0 }, /* 20 */
++	{ 38, 140, 240, SND_19_BUS_START_PULL_AWAY,            224, 18, CT_LIVESTOCK    ,   0 }, /* 21 */
++	{  5, 107,  90, SND_19_BUS_START_PULL_AWAY,             96, 14, CT_GOODS        ,   0 }, /* 22 */
++	{ 22, 130, 168, SND_19_BUS_START_PULL_AWAY,            176, 16, CT_GOODS        ,   0 }, /* 23 */
++	{ 39, 140, 240, SND_19_BUS_START_PULL_AWAY,            224, 18, CT_GOODS        ,   0 }, /* 24 */
++	{  6, 114,  90, SND_19_BUS_START_PULL_AWAY,             96, 20, CT_GRAIN        ,   0 }, /* 25 */
++	{ 23, 133, 168, SND_19_BUS_START_PULL_AWAY,            176, 25, CT_GRAIN        ,   0 }, /* 26 */
++	{ 40, 143, 240, SND_19_BUS_START_PULL_AWAY,            224, 30, CT_GRAIN        ,   0 }, /* 27 */
++	{  7, 118,  90, SND_19_BUS_START_PULL_AWAY,             96, 20, CT_WOOD         ,   0 }, /* 28 */
++	{ 24, 137, 168, SND_19_BUS_START_PULL_AWAY,            176, 22, CT_WOOD         ,   0 }, /* 29 */
++	{ 41, 147, 240, SND_19_BUS_START_PULL_AWAY,            224, 24, CT_WOOD         ,   0 }, /* 30 */
++	{  8, 121,  90, SND_19_BUS_START_PULL_AWAY,             96, 22, CT_IRON_ORE     ,   0 }, /* 31 */
++	{ 25, 140, 168, SND_19_BUS_START_PULL_AWAY,            176, 25, CT_IRON_ORE     ,   0 }, /* 32 */
++	{ 42, 150, 240, SND_19_BUS_START_PULL_AWAY,            224, 27, CT_IRON_ORE     ,   0 }, /* 33 */
++	{  9, 112,  90, SND_19_BUS_START_PULL_AWAY,             96, 15, CT_STEEL        ,   0 }, /* 34 */
++	{ 26, 135, 168, SND_19_BUS_START_PULL_AWAY,            176, 18, CT_STEEL        ,   0 }, /* 35 */
++	{ 43, 145, 240, SND_19_BUS_START_PULL_AWAY,            224, 20, CT_STEEL        ,   0 }, /* 36 */
++	{ 10, 145,  90, SND_19_BUS_START_PULL_AWAY,             96, 12, CT_VALUABLES    ,   0 }, /* 37 */
++	{ 27, 170, 168, SND_19_BUS_START_PULL_AWAY,            176, 15, CT_VALUABLES    ,   0 }, /* 38 */
++	{ 44, 180, 240, SND_19_BUS_START_PULL_AWAY,            224, 16, CT_VALUABLES    ,   0 }, /* 39 */
++	{ 11, 112,  90, SND_19_BUS_START_PULL_AWAY,             96, 17, CT_FOOD         ,   0 }, /* 40 */
++	{ 28, 134, 168, SND_19_BUS_START_PULL_AWAY,            176, 20, CT_FOOD         ,   0 }, /* 41 */
++	{ 45, 144, 240, SND_19_BUS_START_PULL_AWAY,            224, 22, CT_FOOD         ,   0 }, /* 42 */
++	{ 12, 112,  90, SND_19_BUS_START_PULL_AWAY,             96, 15, CT_PAPER        ,   0 }, /* 43 */
++	{ 29, 135, 168, SND_19_BUS_START_PULL_AWAY,            176, 18, CT_PAPER        ,   0 }, /* 44 */
++	{ 46, 145, 240, SND_19_BUS_START_PULL_AWAY,            224, 20, CT_PAPER        ,   0 }, /* 45 */
++	{ 13, 121,  90, SND_19_BUS_START_PULL_AWAY,             96, 22, CT_COPPER_ORE   ,   0 }, /* 46 */
++	{ 30, 140, 168, SND_19_BUS_START_PULL_AWAY,            176, 25, CT_COPPER_ORE   ,   0 }, /* 47 */
++	{ 47, 150, 240, SND_19_BUS_START_PULL_AWAY,            224, 27, CT_COPPER_ORE   ,   0 }, /* 48 */
++	{ 14, 111,  90, SND_19_BUS_START_PULL_AWAY,             96, 21, CT_WATER        ,   0 }, /* 49 */
++	{ 31, 141, 168, SND_19_BUS_START_PULL_AWAY,            176, 25, CT_WATER        ,   0 }, /* 50 */
++	{ 48, 151, 240, SND_19_BUS_START_PULL_AWAY,            224, 27, CT_WATER        ,   0 }, /* 51 */
++	{ 15, 118,  90, SND_19_BUS_START_PULL_AWAY,             96, 18, CT_FRUIT        ,   0 }, /* 52 */
++	{ 32, 148, 168, SND_19_BUS_START_PULL_AWAY,            176, 20, CT_FRUIT        ,   0 }, /* 53 */
++	{ 49, 158, 240, SND_19_BUS_START_PULL_AWAY,            224, 23, CT_FRUIT        ,   0 }, /* 54 */
++	{ 16, 117,  90, SND_19_BUS_START_PULL_AWAY,             96, 17, CT_RUBBER       ,   0 }, /* 55 */
++	{ 33, 147, 168, SND_19_BUS_START_PULL_AWAY,            176, 19, CT_RUBBER       ,   0 }, /* 56 */
++	{ 50, 157, 240, SND_19_BUS_START_PULL_AWAY,            224, 22, CT_RUBBER       ,   0 }, /* 57 */
++	{ 52, 117,  90, SND_3F_COMEDY_CAR_3,                    96, 17, CT_SUGAR        ,   0 }, /* 58 */
++	{ 52, 147, 168, SND_40_COMEDY_CAR_START_AND_PULL_AWAY, 176, 19, CT_SUGAR        ,   0 }, /* 59 */
++	{ 52, 157, 240, SND_3F_COMEDY_CAR_3,                   224, 22, CT_SUGAR        ,   0 }, /* 60 */
++	{ 53, 117,  90, SND_40_COMEDY_CAR_START_AND_PULL_AWAY,  96, 17, CT_COLA         ,   0 }, /* 61 */
++	{ 53, 147, 168, SND_3F_COMEDY_CAR_3,                   176, 19, CT_COLA         ,   0 }, /* 62 */
++	{ 53, 157, 240, SND_40_COMEDY_CAR_START_AND_PULL_AWAY, 224, 22, CT_COLA         ,   0 }, /* 63 */
++	{ 54, 117,  90, SND_3F_COMEDY_CAR_3,                    96, 17, CT_COTTON_CANDY ,   0 }, /* 64 */
++	{ 54, 147, 168, SND_40_COMEDY_CAR_START_AND_PULL_AWAY, 176, 19, CT_COTTON_CANDY ,   0 }, /* 65 */
++	{ 54, 157, 240, SND_3F_COMEDY_CAR_3,                   224, 22, CT_COTTON_CANDY ,   0 }, /* 66 */
++	{ 55, 117,  90, SND_40_COMEDY_CAR_START_AND_PULL_AWAY,  96, 17, CT_TOFFEE       ,   0 }, /* 67 */
++	{ 55, 147, 168, SND_3F_COMEDY_CAR_3,                   176, 19, CT_TOFFEE       ,   0 }, /* 68 */
++	{ 55, 157, 240, SND_40_COMEDY_CAR_START_AND_PULL_AWAY, 224, 22, CT_TOFFEE       ,   0 }, /* 69 */
++	{ 56, 117,  90, SND_3F_COMEDY_CAR_3,                    96, 17, CT_TOYS         ,   0 }, /* 70 */
++	{ 56, 147, 168, SND_40_COMEDY_CAR_START_AND_PULL_AWAY, 176, 19, CT_TOYS         ,   0 }, /* 71 */
++	{ 56, 157, 240, SND_3F_COMEDY_CAR_3,                   224, 22, CT_TOYS         ,   0 }, /* 72 */
++	{ 58, 117,  90, SND_40_COMEDY_CAR_START_AND_PULL_AWAY,  96, 17, CT_CANDY        ,   0 }, /* 73 */
++	{ 58, 147, 168, SND_3F_COMEDY_CAR_3,                   176, 19, CT_CANDY        ,   0 }, /* 74 */
++	{ 58, 157, 240, SND_40_COMEDY_CAR_START_AND_PULL_AWAY, 224, 22, CT_CANDY        ,   0 }, /* 75 */
++	{ 59, 117,  90, SND_3F_COMEDY_CAR_3,                    96, 17, CT_BATTERIES    ,   0 }, /* 76 */
++	{ 59, 147, 168, SND_40_COMEDY_CAR_START_AND_PULL_AWAY, 176, 19, CT_BATTERIES    ,   0 }, /* 77 */
++	{ 59, 157, 240, SND_3F_COMEDY_CAR_3,                   224, 22, CT_BATTERIES    ,   0 }, /* 78 */
++	{ 60, 117,  90, SND_40_COMEDY_CAR_START_AND_PULL_AWAY,  96, 17, CT_FIZZY_DRINKS ,   0 }, /* 79 */
++	{ 60, 147, 168, SND_3F_COMEDY_CAR_3,                   176, 19, CT_FIZZY_DRINKS ,   0 }, /* 80 */
++	{ 60, 157, 240, SND_40_COMEDY_CAR_START_AND_PULL_AWAY, 224, 22, CT_FIZZY_DRINKS ,   0 }, /* 81 */
++	{ 61, 117,  90, SND_3F_COMEDY_CAR_3,                    96, 17, CT_PLASTIC      ,   0 }, /* 82 */
++	{ 61, 147, 168, SND_40_COMEDY_CAR_START_AND_PULL_AWAY, 176, 19, CT_PLASTIC      ,   0 }, /* 83 */
++	{ 61, 157, 240, SND_3F_COMEDY_CAR_3,                   224, 22, CT_PLASTIC      ,   0 }, /* 84 */
++	{ 62, 117,  90, SND_40_COMEDY_CAR_START_AND_PULL_AWAY,  96, 17, CT_BUBBLES      ,   0 }, /* 85 */
++	{ 62, 147, 168, SND_3F_COMEDY_CAR_3,                   176, 19, CT_BUBBLES      ,   0 }, /* 86 */
++	{ 62, 157, 240, SND_40_COMEDY_CAR_START_AND_PULL_AWAY, 224, 22, CT_BUBBLES      ,   0 }, /* 87 */
+ };
+ 
+ #endif /* ENGINES_H */
+Index: vehicle.c
+===================================================================
+--- vehicle.c	(revision 1079)
++++ vehicle.c	(working copy)
+@@ -581,6 +581,16 @@
+ 	FOR_ALL_VEHICLES(v) {
+ 		if (v->type != 0)
+ 			_vehicle_tick_procs[v->type - 0x10](v);
++
++		/* vehicle has pending profits (from gradual loading) */
++		if ((_patches.gradual_load) && (v->profit_pending!=0) && (v->current_order.type != OT_LOADING)) {
++			_current_player = v->owner;
++			if (_current_player == _local_player)
++				SndPlayVehicleFx(0x12, v);
++
++			ShowCostOrIncomeAnimation(v->x_pos, v->y_pos, v->z_pos, -v->profit_pending);
++			v->profit_pending=0;
++		}
+ 	}
+ }
+ 
+@@ -1649,11 +1659,12 @@
+ 	SLE_VAR(Vehicle,random_bits,       SLE_UINT8),
+ 	SLE_VAR(Vehicle,waiting_triggers,  SLE_UINT8),
+ 
+-	// reserve extra space in savegame here. (currently 14 bytes)
+-	SLE_CONDARR(NullStruct,null,SLE_FILE_U8 | SLE_VAR_NULL, 2, 2, 255), /* 2 */
+-	SLE_CONDARR(NullStruct,null,SLE_FILE_U16 | SLE_VAR_NULL, 2, 2, 255), /* 4 */
+-	SLE_CONDARR(NullStruct,null,SLE_FILE_U32 | SLE_VAR_NULL, 2, 2, 255), /* 8 */
+-
++	SLE_CONDVAR(Vehicle,profit_pending,		SLE_INT32, 2, 255),
++	SLE_CONDVAR(Vehicle,loading_speed,		SLE_UINT8, 2, 255),
++	
++	// reserve extra space in savegame here. (currently 9 bytes)
++	SLE_CONDARR(NullStruct,null,SLE_FILE_U8 | SLE_VAR_NULL, 9, 2, 255), /* 2*1 */
++	
+ 	SLE_END()
+ };
+ 
+Index: vehicle.h
+===================================================================
+--- vehicle.h	(revision 1079)
++++ vehicle.h	(working copy)
+@@ -166,6 +166,7 @@
+ 	byte cargo_source;// source of cargo
+ 	uint16 cargo_cap;	// total capacity
+ 	uint16 cargo_count;// how many pieces are used
++	uint8 loading_speed; // loading speed (for gradual loading)
+ 
+ 	byte day_counter; // increased by one for each day
+ 	byte tick_counter;// increased by one for each tick
+@@ -196,8 +197,11 @@
+ 
+ 	uint16 load_unload_time_rem;
+ 
++	int32 profit_pending;
++	
+ 	int32 profit_this_year;
+ 	int32 profit_last_year;
++	
+ 	uint32 value;
+ 
+ 	union {
+Index: economy.c
+===================================================================
+--- economy.c	(revision 1079)
++++ economy.c	(working copy)
+@@ -1228,20 +1228,22 @@
+  * already loading the same cargo type
+  * v = vehicle to load, u = GetFirstInChain(v)
+  */
+-static bool LoadWait(const Vehicle *v, const Vehicle *u) {
++static uint16 LoadWait(const Vehicle *v, const Vehicle *u) {
+ 	const Vehicle *w;
+ 	const Vehicle *x;
+-	bool has_any_cargo = false;
+ 
+-	if (!(u->current_order.flags & OF_FULL_LOAD)) return false;
++	uint16 cargo_reserved = 0;
++	
++	uint16 has_other_cargo = 0;
++	uint16 has_type = 0;
+ 
++	if (!(u->current_order.flags & OF_FULL_LOAD)) return 0;
++
+ 	for (w = u; w != NULL; w = w->next) {
+-		if (w->cargo_count != 0) {
+-			if (v->cargo_type == w->cargo_type &&
+-					u->last_station_visited == w->cargo_source)
+-				return false;
+-			has_any_cargo = true;
+-		}
++	  if (v->cargo_type == w->cargo_type) 
++			has_type+= w->cargo_count;
++		else 
++			has_other_cargo+= w->cargo_count;
+ 	}
+ 
+ 	FOR_ALL_VEHICLES(x) {
+@@ -1249,33 +1251,37 @@
+ 				u->last_station_visited == x->last_station_visited && // at the same station
+ 				!(x->vehstatus & VS_STOPPED) && // not stopped
+ 				x->current_order.type == OT_LOADING && // loading
++				!(u->current_order.flags & OF_UNLOAD) && // not unloading
+ 				u != x) { // not itself
+-			bool other_has_any_cargo = false;
+-			bool has_space_for_same_type = false;
+-			bool other_has_same_type = false;
++			uint16 other_has_other_cargo = 0;
++			uint16 other_has_space_for_same_type = 0;
++			uint16 other_has_same_type = 0;
+ 
+ 			for (w = x; w != NULL; w = w->next) {
+-				if (w->cargo_count < w->cargo_cap && v->cargo_type == w->cargo_type)
+-					has_space_for_same_type = true;
+ 
+-				if (w->cargo_count != 0) {
+-					if (v->cargo_type == w->cargo_type &&
+-							u->last_station_visited == w->cargo_source)
+-						other_has_same_type = true;
+-					other_has_any_cargo = true;
+-				}
++				if (v->cargo_type == w->cargo_type) {
++					other_has_space_for_same_type+= w->cargo_cap - w->cargo_count;
++ 					other_has_same_type+= w->cargo_count;
++				} else
++					other_has_other_cargo+= w->cargo_count;
+ 			}
+ 
+-			if (has_space_for_same_type) {
+-				if (other_has_same_type) return true;
+-				if (other_has_any_cargo && !has_any_cargo) return true;
++			if (other_has_space_for_same_type) {
++				if ((other_has_same_type>has_type) || (other_has_other_cargo>has_other_cargo))
++					cargo_reserved+=other_has_space_for_same_type;
+ 			}
+ 		}
+ 	}
+ 
+-	return false;
++	return cargo_reserved;
+ }
+ 
++enum { 
++	MASK_DELIVER=1,
++	MASK_LOAD_UNLOAD=2,
++	MASK_NOT_DONE_UNLOADING=4,
++};
++
+ int LoadUnloadVehicle(Vehicle *v)
+ {
+ 	int profit = 0;
+@@ -1289,7 +1295,8 @@
+ 	uint count, cap;
+ 	byte old_player;
+ 	bool completely_empty = true;
+-
++	int16 platform_cap;
++	
+ 	assert(v->current_order.type == OT_LOADING);
+ 
+ 	v->cur_speed = 0;
+@@ -1298,45 +1305,70 @@
+ 
+ 	st = DEREF_STATION(last_visited = v->last_station_visited);
+ 
++	if (_patches.gradual_load && (v->type == VEH_Train)) {	
++		platform_cap=(int)GetStationPlatforms(st, v->tile)*2;
++	} else {
++		platform_cap=-1;
++	};
++
+ 	for (; v != NULL; v = v->next) {
+ 		if (v->cargo_cap == 0) continue;
+ 
+ 		ge = &st->goods[v->cargo_type];
+ 
+ 		/* unload? */
+-		if (v->cargo_count != 0) {
++		if ((cap=v->cargo_count) != 0) {
++			//if (_patches.gradual_load && (cap > v->loading_speed)) cap = v->loading_speed;
++			if (_patches.gradual_load) {
++				uint gl_cap=v->loading_speed;
++				if (gl_cap==0) gl_cap = default_loading_speed[v->cargo_type]*default_loading_speed_multiplier[v->type - VEH_Train];
++				if (cap>gl_cap) cap=gl_cap;
++			};
+ 			if (v->cargo_source != (byte)last_visited && ge->waiting_acceptance & 0x8000) {
+ 				// deliver goods to the station
+-				unloading_time += v->cargo_count; /* TTDBUG: bug in original TTD */
+-				profit += DeliverGoods(v->cargo_count, v->cargo_type, v->cargo_source, last_visited, v->cargo_days);
+-				result |= 1;
+-				v->cargo_count = 0;
++				if (platform_cap) {
++					--platform_cap;
++					if (!_patches.gradual_load) unloading_time += v->cargo_count; /* TTDBUG: bug in original TTD */
++					profit += DeliverGoods(cap, v->cargo_type, v->cargo_source, last_visited, v->cargo_days);
++					v->cargo_count -= cap;
++				};
++				result |= MASK_DELIVER;
++				if (v->cargo_count != 0) {
++					result |= MASK_NOT_DONE_UNLOADING;
++					completely_empty=false;
++				}
++				continue;
+ 			} else if (u->current_order.flags & OF_UNLOAD) {
+ 				/* unload goods and let it wait at the station */
+-				st->time_since_unload = 0;
++				if (platform_cap) {
++					--platform_cap;
++					st->time_since_unload = 0;
+ 
+-				if ((t=ge->waiting_acceptance & 0xFFF) == 0) {
+-					// No goods waiting at station
+-					ge->enroute_time = v->cargo_days;
+-					ge->enroute_from = v->cargo_source;
+-				} else {
+-					// Goods already waiting at station. Set counters to the worst value.
+-					if (v->cargo_days >= ge->enroute_time)
++					if ((t=ge->waiting_acceptance & 0xFFF) == 0) {
++						// No goods waiting at station
+ 						ge->enroute_time = v->cargo_days;
+-					if ((byte)last_visited != ge->enroute_from)
+ 						ge->enroute_from = v->cargo_source;
++					} else {
++						// Goods already waiting at station. Set counters to the worst value.
++						if (v->cargo_days >= ge->enroute_time)
++							ge->enroute_time = v->cargo_days;
++						if ((byte)last_visited != ge->enroute_from)
++							ge->enroute_from = v->cargo_source;
++					}
++					// Update amount of waiting cargo
++					ge->waiting_acceptance = (ge->waiting_acceptance &~0xFFF) | min(cap + t, 0xFFF);
++			  	v->cargo_count -= cap;
++				};
++				result |= MASK_LOAD_UNLOAD;
++				if (v->cargo_count != 0) {
++					result |= MASK_NOT_DONE_UNLOADING;
++					completely_empty=false;
+ 				}
+-				// Update amount of waiting cargo
+-				ge->waiting_acceptance = (ge->waiting_acceptance &~0xFFF) | min(v->cargo_count + t, 0xFFF);
+-				result |= 2;
+-				v->cargo_count = 0;
++				continue;
+ 			}
+-
+-			if (v->cargo_count != 0)
+-				completely_empty = false;
+ 		}
+ 
+-		/* don't pick up goods that we unloaded */
++	  		/* don't pick up goods that we unloaded */
+ 		if (u->current_order.flags & OF_UNLOAD) continue;
+ 
+ 		/* update stats */
+@@ -1344,6 +1376,7 @@
+ 		t = u->max_speed;
+ 		if (u->type == VEH_Road) t >>=1;
+ 
++
+ 		// if last speed is 0, we treat that as if no vehicle has ever visited the station.
+ 		ge->last_speed = t < 255 ? t : 255;
+ 		ge->last_age = _cur_year - v->build_year;
+@@ -1357,34 +1390,44 @@
+ 
+ 			/* Skip loading this vehicle if another train/vehicle is already handling
+ 			 * the same cargo type at this station */
+-			if (_patches.improved_load && LoadWait(v,u)) continue;
++			if (_patches.improved_load) {
++				int16 ncap=count-LoadWait(v,u);
++				if (ncap<0) ncap=0;
++				if (cap>ncap) cap=ncap;
++			};
+ 
+-			/* TODO: Regarding this, when we do gradual loading, we
+-			 * should first unload all vehicles and then start
+-			 * loading them. Since this will cause
+-			 * VEHICLE_TRIGGER_EMPTY to be called at the time when
+-			 * the whole vehicle chain is really totally empty, the
+-			 * @completely_empty assignment can then be safely
+-			 * removed; that's how TTDPatch behaves too. --pasky */
+-			completely_empty = false;
+ 
+-			if (cap > count) cap = count;
+-			v->cargo_count += cap;
+-			ge->waiting_acceptance -= cap;
+-			unloading_time += cap;
+-			st->time_since_load = 0;
++			if (cap && platform_cap) {
++				--platform_cap;
++				
++				//if (_patches.gradual_load && (cap > v->loading_speed)) cap = v->loading_speed;
++				if (_patches.gradual_load) {
++					uint gl_cap=v->loading_speed;
++					if (gl_cap==0) gl_cap=default_loading_speed[v->cargo_type]*default_loading_speed_multiplier[u->type - VEH_Train];
++					if (cap>gl_cap) cap=gl_cap;
++				};
+ 
+-			// And record the source of the cargo, and the days in travel.
+-			v->cargo_source = ge->enroute_from;
+-			v->cargo_days = ge->enroute_time;
+-			result |= 2;
+-			st->last_vehicle = v->index;
++				if (cap > count) cap = count;
++				v->cargo_count += cap;
++				ge->waiting_acceptance -= cap;
++				if (!_patches.gradual_load) unloading_time += cap;
++				st->time_since_load = 0;
++	
++				// And record the source of the cargo, and the days in travel.
++				v->cargo_source = ge->enroute_from;
++				v->cargo_days = ge->enroute_time;
++				st->last_vehicle = v->index;
++			}
++
++			result |= MASK_LOAD_UNLOAD;
++			if (v->cargo_count != 0)
++				completely_empty = false;
+ 		}
+ 	}
+ 
+ 	v = u;
+ 
+-	if (v->type == VEH_Train) {
++	if (!_patches.gradual_load && (v->type == VEH_Train)) {
+ 		int num = - (int)GetStationPlatforms(st, v->tile) * 2;
+ 		do num++; while ( (v=v->next) != NULL);
+ 		if (num > 0) {
+@@ -1394,27 +1437,45 @@
+ 		v = u;
+ 	}
+ 
+-	v->load_unload_time_rem = unloading_time;
+ 
+ 	if (completely_empty) {
+ 		TriggerVehicle(v, VEHICLE_TRIGGER_EMPTY);
+ 	}
+ 
+-	if (result != 0) {
++	if (_patches.gradual_load) {
++		unloading_time = 40;
++
++		v->profit_pending += profit;
++
++		v->profit_this_year += profit;
++		SubtractMoneyFromPlayer(-profit);
++
++		profit = 0;
++
++		if (!(result & MASK_NOT_DONE_UNLOADING)) {
++			profit=v->profit_pending;
++			v->profit_pending=0;
++		} 
++	}
++
++	if (result & (MASK_DELIVER | MASK_LOAD_UNLOAD)) {
+ 		InvalidateWindow(WC_VEHICLE_DETAILS, v->index);
+ 
+-		if (result & 2)
++		if (result & MASK_LOAD_UNLOAD)
+ 			InvalidateWindow(WC_STATION_VIEW, last_visited);
++	} 
+ 
+-		if (profit != 0) {
+-			v->profit_this_year += profit;
+-			SubtractMoneyFromPlayer(-profit);
++	v->load_unload_time_rem = unloading_time;
+ 
+-			if (_current_player == _local_player)
+-				SndPlayVehicleFx(SND_14_CASHTILL, v);
++	if (profit != 0) {
++		if (!_patches.gradual_load) { 
++		 v->profit_this_year += profit;
++		 SubtractMoneyFromPlayer(-profit);
++		};
++		if (_current_player == _local_player)
++			SndPlayVehicleFx(SND_14_CASHTILL, v);
+ 
+-			ShowCostOrIncomeAnimation(v->x_pos, v->y_pos, v->z_pos, -profit);
+-		}
++		ShowCostOrIncomeAnimation(v->x_pos, v->y_pos, v->z_pos, -profit);
+ 	}
+ 
+ 	_current_player = old_player;
+Index: economy.h
+===================================================================
+--- economy.h	(revision 1079)
++++ economy.h	(working copy)
+@@ -60,6 +60,31 @@
+     {SCORE_TOTAL,				0,				0}
+ };
+ 
++/* for gradual loading, amount of cargo loaded/unloaded per 20 frames */
++static const uint8 default_loading_speed[] = {
++	5,	//	CT_PASSENGERS
++	6,	//	CT_COAL														CT_RUBBER				CT_SUGAR
++	5,	//	CT_MAIL
++	6,	//	CT_OIL																						CT_TOYS
++	5,	//	CT_LIVESTOCK											CT_FRUIT				CT_BATTERIES
++	5,	//	CT_GOODS																					CT_CANDY
++	6,	//	CT_GRAIN																					CT_TOFFEE
++	6,	//	CT_WOOD																						CT_COLA
++	6,	//	CT_IRON_ORE			CT_HILLY_UNUSED		CT_COPPER_ORE		CT_COTTON_CANDY
++	4,	//	CT_STEEL				CT_PAPER					CT_WATER				CT_BUBBLES
++	3,	//	CT_VALUABLES																			CT_PLASTIC
++	5		//	CT_FOOD																						CT_FIZZY_DRINKS
++};
++
++static const uint8 default_loading_speed_multiplier[] = {
++	1, // [VEH_Train - 0x10]
++	1, // [VEH_Road - 0x10]
++	3, // [VEH_Ship - 0x10]
++	2, // [VEH_Aircraft - 0x10]
++	0, // [VEH_Special - 0x10]
++	0  // [VEH_Disaster - 0x10]
++};
++
+ int _score_part[MAX_PLAYERS][NUM_SCORE];
+ 
+ int UpdateCompanyRatingAndValue(Player *p, bool update);
+Index: ship_cmd.c
+===================================================================
+--- ship_cmd.c	(revision 1079)
++++ ship_cmd.c	(working copy)
+@@ -274,6 +274,16 @@
+ 			}
+ 			return;
+ 		}
++
++		if (_patches.gradual_load) {
++			SET_EXPENSES_TYPE(EXPENSES_SHIP_INC);
++			if (LoadUnloadVehicle(v)) {
++				InvalidateWindow(WC_SHIPS_LIST, v->owner);
++				MarkShipDirty(v);
++				return;
++			}
++		}
++
+ 		PlayShipSound(v);
+ 
+ 		{
+@@ -844,6 +854,7 @@
+ 		v->cargo_type = svi->cargo_type;
+ 		v->cargo_cap = svi->capacity;
+ 		v->value = value;
++		v->loading_speed = svi->loading_speed;
+ 
+ 		v->last_station_visited = 255;
+ 		v->max_speed = svi->max_speed;
+Index: settings.c
+===================================================================
+--- settings.c	(revision 1079)
++++ settings.c	(working copy)
+@@ -823,6 +823,7 @@
+ 	{"always_small_airport",SDT_BOOL,		(void*)false,	&_patches.always_small_airport,	NULL},
+ 	{"realistic_acceleration",SDT_BOOL, (void*)false,	&_patches.realistic_acceleration,	NULL},
+ 	{"improved_load",				SDT_BOOL,		(void*)false,	&_patches.improved_load,				NULL},
++	{"gradual_load",				SDT_BOOL,		(void*)false,	&_patches.gradual_load,					NULL},
+ 
+ 	{"max_trains",					SDT_UINT8,	(void*)80,		&_patches.max_trains,						NULL},
+ 	{"max_roadveh",					SDT_UINT8,	(void*)80,		&_patches.max_roadveh,					NULL},
+Index: settings_gui.c
+===================================================================
+--- settings_gui.c	(revision 1079)
++++ settings_gui.c	(working copy)
+@@ -637,6 +637,7 @@
+ 	{PE_BOOL,		0, STR_CONFIG_PATCHES_JOINSTATIONS,			"join_stations", &_patches.join_stations,						0,  0,  0, NULL},
+ 	{PE_BOOL,		0, STR_CONFIG_PATCHES_FULLLOADANY,			"full_load_any", &_patches.full_load_any,						0,  0,  0, NULL},
+ 	{PE_BOOL,		0, STR_CONFIG_PATCHES_IMPROVEDLOAD,			"improved_load", &_patches.improved_load,						0,  0,  0, NULL},
++	{PE_BOOL,		0, STR_CONFIG_PATCHES_GRADUALLOAD,			"gradual_load",  &_patches.gradual_load, 						0,  0,  0, NULL},
+ 	{PE_BOOL,		0, STR_CONFIG_PATCHES_SELECTGOODS,			"select_goods",  &_patches.selectgoods,							0,  0,  0, NULL},
+ 	{PE_BOOL,		0, STR_CONFIG_PATCHES_NEW_NONSTOP,			"new_nonstop", &_patches.new_nonstop,							0,  0,  0, NULL},
+ 	{PE_BOOL,		0, STR_CONFIG_PATCHES_NONUNIFORM_STATIONS, "nonuniform_stations", &_patches.nonuniform_stations,		0,  0,  0, NULL},
+Index: newgrf.c
+===================================================================
+--- newgrf.c	(revision 1079)
++++ newgrf.c	(working copy)
+@@ -200,6 +200,13 @@
+ 				ei[i].railtype_climates |= tracktype << 4;
+ 			}
+ 		}	break;
++		case 0x07: {  /* Loading speed */
++			FOR_EACH_OBJECT {
++				uint8 loading_speed = grf_load_byte(&buf);
++
++				rvi[i].loading_speed = loading_speed;
++			}
++		} break;
+ 		case 0x08: {	/* AI passenger service */
+ 			/* TODO */
+ 			FOR_EACH_OBJECT {
+@@ -366,6 +373,13 @@
+ 	bool ret = false;
+ 
+ 	switch (prop) {
++		case 0x07: {  /* Loading speed */
++			FOR_EACH_OBJECT {
++				uint8 loading_speed = grf_load_byte(&buf);
++
++				rvi[i].loading_speed = loading_speed;
++			}
++		} break;
+ 		case 0x08: {	/* Speed */
+ 			FOR_EACH_OBJECT {
+ 				uint8 speed = grf_load_byte(&buf);
+@@ -473,6 +487,13 @@
+ 
+ 	//printf("e %x prop %x?\n", engine, prop);
+ 	switch (prop) {
++		case 0x07: {  /* Loading speed */
++			FOR_EACH_OBJECT {
++				uint8 loading_speed = grf_load_byte(&buf);
++
++				svi[i].loading_speed = loading_speed;
++			}
++		} break;
+ 		case 0x08: {	/* Sprite ID */
+ 			FOR_EACH_OBJECT {
+ 				uint8 spriteid = grf_load_byte(&buf);
+@@ -571,6 +592,13 @@
+ 
+ 	//printf("e %x prop %x?\n", engine, prop);
+ 	switch (prop) {
++		case 0x07: {  /* Loading speed */
++			FOR_EACH_OBJECT {
++				uint8 loading_speed = grf_load_byte(&buf);
++
++				avi[i].loading_speed = loading_speed;
++			}
++		} break;
+ 		case 0x08: {	/* Sprite ID */
+ 			FOR_EACH_OBJECT {
+ 				uint8 spriteid = grf_load_byte(&buf);
+@@ -1024,18 +1052,6 @@
+ 				ei[i].railtype_climates |= climates;
+ 			}
+ 		}	break;
+-		case 0x07: { /* Loading speed */
+-			/* TODO */
+-			/* Hyronymus explained me what does
+-			 * this mean and insists on having a
+-			 * credit ;-). --pasky */
+-			/* TODO: This needs to be supported by
+-			 * LoadUnloadVehicle() first. */
+-			FOR_EACH_OBJECT {
+-				grf_load_byte(&buf);
+-			}
+-			goto ignoring;
+-		}
+ 		default: {
+ run_handler:
+ 			if (handler[feature](engine, numinfo, prop, &buf, bufend - buf)) {
