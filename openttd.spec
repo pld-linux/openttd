@@ -9,6 +9,8 @@ Group:		X11/Applications/Games
 #Source0:	http://dl.sf.net/openttd/%{name}-%{version}.tbz
 Source0:	%{name}.tar.bz2
 # Source0-md5:	ee15b3149cafcbda4ee69e117f7c1b50
+Source1:	http://dl.sf.net/openttd/%{name}-useful.zip
+# Source1-md5:	070d66ed5086515a45f0a40a25c28771
 Patch0:		%{name}-makefile.patch
 Patch1:		%{name}-home_etc.patch
 URL:		http://www.openttd.com/
@@ -17,6 +19,7 @@ BuildRequires:	SDL-devel
 %{?with_home_etc:BuildRequires:	home-etc-devel}
 BuildRequires:	libpng-devel
 BuildRequires:	sed >= 4
+BuildRequires:	unzip
 BuildRequires:	zlib-devel
 BuildRoot:	%{tmpdir}/%{name}-%{version}-root-%(id -u -n)
 
@@ -39,6 +42,8 @@ Do uruchomienia wymagane s± pliki danych z Transport Tycoon Deluxe.
 %setup -q -n %{name}
 %patch0 -p1
 %{?with_home_etc:%patch1 -p1}
+
+unzip %{SOURCE1} -d useful
 
 # Let's pldize
 sed -i 's/:Unix/:PLD Linux/' lang/*
@@ -63,6 +68,7 @@ install ttd $RPM_BUILD_ROOT%{_bindir}
 
 install data/* $RPM_BUILD_ROOT%{_datadir}/%{name}/data
 install lang/*.lng $RPM_BUILD_ROOT%{_datadir}/%{name}/lang
+install useful/opntitle.dat $RPM_BUILD_ROOT%{_datadir}/%{name}/data
 
 %clean
 rm -rf $RPM_BUILD_ROOT
