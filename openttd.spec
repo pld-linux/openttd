@@ -1,4 +1,4 @@
-%define		snap	20040918
+%define		snap	20041120
 %bcond_without	home_etc	# without home_etc support
 Summary:	An open source reimplementation of the Microprose game "Transport Tycoon Deluxe"
 Summary(pl):	Otwarta reimplementacja gry Transport Tycoon Deluxe
@@ -9,7 +9,7 @@ License:	GPL
 Group:		X11/Applications/Games
 #Source0:	http://dl.sf.net/openttd/%{name}-%{version}.tar.bz2
 Source0:	%{name}-%{snap}.tar.bz2
-# Source0-md5:	f6c42a46da76fe288fe3ad78ae1b4d8d
+# Source0-md5:	a19eff4336bff73ce6941c8de398cb54
 Patch0:		%{name}-home_etc.patch
 URL:		http://www.openttd.com/
 BuildRequires:	SDL-devel
@@ -37,7 +37,7 @@ pomys³ów.
 Do uruchomienia wymagane s± pliki danych z Transport Tycoon Deluxe.
 
 %prep
-%setup -q -n %{name}-%{snap}
+%setup -q -n %{name}
 %{?with_home_etc:%patch0 -p1}
 
 # Let's pldize
@@ -49,7 +49,10 @@ sed -i 's/:Unix/:PLD Linux/' lang/*
 	CXX="%{__cxx}" \
 	CFLAGS="%{rpmcflags} `sdl-config --cflags`" \
 	LDFLAGS="%{rpmldflags}" \
-	GAME_DATA_DIR="%{_datadir}/%{name}/" \
+	INSTALL=1 \
+	PREFIX="" \
+	BINARY_DIR="%{_bindir}" \
+	DATA_DIR="%{_datadir}/%{name}/" \
 	PERSONAL_DIR=".%{name}" \
 	%{?with_home_etc:WITH_HOME_ETC=1} \
 	USE_HOMEDIR=1 \
@@ -57,13 +60,13 @@ sed -i 's/:Unix/:PLD Linux/' lang/*
 
 %install
 rm -rf $RPM_BUILD_ROOT
-install -d $RPM_BUILD_ROOT{%{_bindir},%{_datadir}/%{name}/{data,gm,lang,scripts}}
 
-install openttd $RPM_BUILD_ROOT%{_bindir}
-
-install data/* $RPM_BUILD_ROOT%{_datadir}/%{name}/data
-install lang/*.lng $RPM_BUILD_ROOT%{_datadir}/%{name}/lang
-install scripts/* $RPM_BUILD_ROOT%{_datadir}/%{name}/scripts
+%{__make} install \
+	DEST_DIR=$RPM_BUILD_ROOT \
+	INSTALL=1 \
+	PREFIX="/" \
+	BINARY_DIR="%{_bindir}" \
+	DATA_DIR="%{_datadir}/%{name}/"
 
 %clean
 rm -rf $RPM_BUILD_ROOT
