@@ -2,8 +2,8 @@
 Encoding=UTF-8
 Name=OpenTTD server
 Name[pl]=Serwer OpenTTD
-Comment=Open Transport Tycoon Deluxe dedicated server
-Comment[pl]=Dedykowany serwer Open Transport Tycoon Deluxe
+Comment=OpenTTD dedicated server
+Comment[pl]=Dedykowany serwer OpenTTD
 Exec=openttd-dedicated
 Terminal=true
 Type=Application
