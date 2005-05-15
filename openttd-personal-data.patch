@@ -13,6 +13,18 @@ diff -ruN openttd./fileio.c openttd/fileio.c
  #endif
  
  	if (f == NULL)
+@@ -167,6 +167,11 @@
+ 		}
+ #endif
+ 	}
++	if (f == NULL) {
++		// Look for file in personal data dir
++		sprintf(buf, "%s%s", _path.personal_data_dir, filename);
++		f = fopen(buf, "rb");
++	}
+ #endif
+ 
+ 	if (f == NULL)
 diff -ruN openttd./unix.c openttd/unix.c
 --- openttd./unix.c	2004-12-07 19:31:02.136402352 +0100
 +++ openttd/unix.c	2004-12-07 19:27:33.786076416 +0100
