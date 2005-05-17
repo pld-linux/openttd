@@ -1,0 +1,157 @@
+Author: Darkvater
+Date: 2005-05-16 16:19:32 +0000 (Mon, 16 May 2005)
+New Revision: 2334
+
+Modified:
+   trunk/Makefile
+   trunk/dedicated.c
+   trunk/gfx.c
+   trunk/gfx.h
+   trunk/hal.h
+   trunk/sdl.c
+   trunk/ttd.c
+   trunk/win32.c
+Log:
+- Fix (regression): moved togglefullscreen into the video-driver, now windows works, dedicated works and sdl works. Also reverted the change to the makefile.
+
+Modified: trunk/dedicated.c
+===================================================================
+--- trunk/dedicated.c	2005-05-16 15:05:49 UTC (rev 2333)
++++ trunk/dedicated.c	2005-05-16 16:19:32 UTC (rev 2334)
+@@ -167,6 +167,7 @@
+ 
+ static void DedicatedVideoMakeDirty(int left, int top, int width, int height) {}
+ static bool DedicatedVideoChangeRes(int w, int h) { return false; }
++static void DedicatedVideoFullScreen(bool fs) {}
+ 
+ #if defined(UNIX) || defined(__OS2__)
+ static bool InputWaiting(void)
+@@ -322,6 +323,7 @@
+ 	DedicatedVideoMakeDirty,
+ 	DedicatedVideoMainLoop,
+ 	DedicatedVideoChangeRes,
++	DedicatedVideoFullScreen,
+ };
+ 
+ #else
+@@ -339,6 +341,7 @@
+ static void DedicatedVideoStop(void) { free(_dedicated_video_mem); }
+ static void DedicatedVideoMakeDirty(int left, int top, int width, int height) {}
+ static bool DedicatedVideoChangeRes(int w, int h) { return false; }
++static void DedicatedVideoFullScreen(bool fs) {}
+ static int DedicatedVideoMainLoop(void) { return ML_QUIT; }
+ 
+ const HalVideoDriver _dedicated_video_driver = {
+@@ -347,6 +350,7 @@
+ 	DedicatedVideoMakeDirty,
+ 	DedicatedVideoMainLoop,
+ 	DedicatedVideoChangeRes,
++	DedicatedVideoFullScreen,
+ };
+ 
+ #endif /* ENABLE_NETWORK */
+
+Modified: trunk/gfx.c
+===================================================================
+--- trunk/gfx.c	2005-05-16 15:05:49 UTC (rev 2333)
++++ trunk/gfx.c	2005-05-16 16:19:32 UTC (rev 2334)
+@@ -1979,6 +1979,8 @@
+ 	return true;
+ }
+ 
++void ToggleFullScreen(bool fs) {_video_driver->toggle_fullscreen(fs);}
++
+ static int CDECL compare_res(const void *pa, const void *pb)
+ {
+ 	int x = ((const uint16*)pa)[0] - ((const uint16*)pb)[0];
+
+Modified: trunk/gfx.h
+===================================================================
+--- trunk/gfx.h	2005-05-16 15:05:49 UTC (rev 2333)
++++ trunk/gfx.h	2005-05-16 16:19:32 UTC (rev 2334)
+@@ -67,7 +67,7 @@
+ void UndrawMouseCursor(void);
+ bool ChangeResInGame(int w, int h);
+ void SortResolutions(int count);
+-void ToggleFullScreen(bool full_screen);
++void ToggleFullScreen(bool fs);
+ 
+ /* gfx.c */
+ #define ASCII_LETTERSTART 32
+
+Modified: trunk/hal.h
+===================================================================
+--- trunk/hal.h	2005-05-16 15:05:49 UTC (rev 2333)
++++ trunk/hal.h	2005-05-16 16:19:32 UTC (rev 2334)
+@@ -12,6 +12,7 @@
+ 	void (*make_dirty)(int left, int top, int width, int height);
+ 	int (*main_loop)(void);
+ 	bool (*change_resolution)(int w, int h);
++	void (*toggle_fullscreen)(bool fullscreen);
+ } HalVideoDriver;
+ 
+ enum {
+
+Modified: trunk/sdl.c
+===================================================================
+--- trunk/sdl.c	2005-05-16 15:05:49 UTC (rev 2333)
++++ trunk/sdl.c	2005-05-16 16:19:32 UTC (rev 2334)
+@@ -636,7 +636,7 @@
+ 	return true;
+ }
+ 
+-void ToggleFullScreen(bool full_screen)
++static void SdlVideoFullScreen(bool full_screen)
+ {
+ 	_fullscreen = full_screen;
+ 	GetVideoModes(); // get the list of available video modes
+@@ -650,6 +650,7 @@
+ 	SdlVideoMakeDirty,
+ 	SdlVideoMainLoop,
+ 	SdlVideoChangeRes,
++	SdlVideoFullScreen,
+ };
+ 
+ static void CDECL fill_sound_buffer(void *userdata, Uint8 *stream, int len)
+
+Modified: trunk/ttd.c
+===================================================================
+--- trunk/ttd.c	2005-05-16 15:05:49 UTC (rev 2333)
++++ trunk/ttd.c	2005-05-16 16:19:32 UTC (rev 2334)
+@@ -148,14 +148,15 @@
+ }
+ 
+ static bool NullVideoChangeRes(int w, int h) { return false; }
++static void NullVideoFullScreen(bool fs) {}
+ 
+-
+ const HalVideoDriver _null_video_driver = {
+ 	NullVideoStart,
+ 	NullVideoStop,
+ 	NullVideoMakeDirty,
+ 	NullVideoMainLoop,
+ 	NullVideoChangeRes,
++	NullVideoFullScreen,
+ };
+ 
+ // NULL sound driver
+
+Modified: trunk/win32.c
+===================================================================
+--- trunk/win32.c	2005-05-16 15:05:49 UTC (rev 2333)
++++ trunk/win32.c	2005-05-16 16:19:32 UTC (rev 2334)
+@@ -783,7 +783,7 @@
+ 	return true;
+ }
+ 
+-void ToggleFullScreen(bool full_screen) {MakeWindow(full_screen);}
++static void Win32GdiFullScreen(bool full_screen) {MakeWindow(full_screen);}
+ 
+ const HalVideoDriver _win32_video_driver = {
+ 	Win32GdiStart,
+@@ -791,6 +791,7 @@
+ 	Win32GdiMakeDirty,
+ 	Win32GdiMainLoop,
+ 	Win32GdiChangeRes,
++	Win32GdiFullScreen,
+ };

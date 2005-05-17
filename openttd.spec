@@ -12,6 +12,7 @@ Source1:	%{name}.desktop
 Source2:	%{name}-server.desktop
 Patch0:		%{name}-home_etc.patch
 Patch1:		%{name}-personal-data.patch
+Patch2:		%{name}-dedicated.patch
 URL:		http://www.openttd.com/
 BuildRequires:	SDL-devel
 %{?with_home_etc:BuildRequires:	home-etc-devel}
@@ -72,6 +73,7 @@ Ten pakiet zawiera dedykowany serwer OpenTTD. Nale¿y zwróciæ uwagê,
 %setup -q
 %{?with_home_etc:%patch0 -p1}
 %patch1 -p1
+%patch2 -p1
 
 # Let's pldize
 find lang/ -type f -exec sed -i 's/:Unix/:PLD Linux/' \{\} \;
@@ -90,9 +92,9 @@ find lang/ -type f -exec sed -i 's/:Unix/:PLD Linux/' \{\} \;
 	%{?with_home_etc:WITH_HOME_ETC=1} \
 	USE_HOMEDIR=1 \
 	WITH_NETWORK=1 \
-	WITH_SDL=1 \
+	WITH_SDL= \
 	WITH_PNG= \
-#	DEDICATED=1
+	DEDICATED=1
 
 mv openttd openttd-dedicated
 
