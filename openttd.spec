@@ -6,7 +6,7 @@ Version:	0.4.0.1
 Release:	1
 License:	GPL
 Group:		X11/Applications/Games
-Source0:	http://dl.sf.net/openttd/%{name}-%{version}-source.tar.gz
+Source0:	http://dl.sourceforge.net/openttd/%{name}-%{version}-source.tar.gz
 # Source0-md5:	ddd9790c86b7ccc68f60761704cbcf81
 Source1:	%{name}.desktop
 Source2:	%{name}-server.desktop
