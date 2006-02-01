@@ -10,7 +10,7 @@ Release:	1
 License:	GPL
 Group:		X11/Applications/Games
 Source0:	http://dl.sourceforge.net/openttd/%{name}-%{version}.tar.bz2
-# Source0-md5:	691e626763f2f33ad3e77717a44d2824
+# Source0-md5:	c494243320c928bdafa57ec333a72d4a
 Source1:	%{name}.desktop
 Source2:	%{name}-server.desktop
 Patch0:		%{name}-home_etc.patch
