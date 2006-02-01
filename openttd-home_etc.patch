@@ -2,9 +2,9 @@ diff -urN openttd-orig/Makefile openttd/Makefile
 --- openttd-orig/Makefile	2004-06-11 23:50:52.583070112 +0200
 +++ openttd/Makefile	2004-06-12 00:00:55.165463664 +0200
 @@ -48,6 +48,7 @@
- # WITH_ZLIB: savegames using zlib
  # WITH_PNG: screenshots using PNG
  # WITH_SDL: SDL video driver support
+ # WITH_COCOA: Cocoa video driver support
 +# WITH_HOME_ETC: with home_etc support
  #
  # Summary of other defines:
