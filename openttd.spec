@@ -20,7 +20,6 @@ BuildRequires:	SDL-devel
 %{?with_home_etc:BuildRequires:	home-etc-devel}
 BuildRequires:	libpng-devel
 BuildRequires:	sed >= 4
-BuildRequires:	unzip
 BuildRequires:	zlib-devel
 Requires:	TiMidity++
 Requires:	%{name}-data = %{version}-%{release}
