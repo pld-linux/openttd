@@ -21,10 +21,10 @@ BuildRequires:	SDL-devel
 BuildRequires:	libpng-devel
 BuildRequires:	sed >= 4
 BuildRequires:	zlib-devel
-Requires:	TiMidity++
 Requires:	%{name}-data = %{version}-%{release}
+Requires:	TiMidity++
 Provides:	%{name}-binary = %{version}-%{release}
-Obsoletes:	%{name}-server
+Obsoletes:	openttd-server
 BuildRoot:	%{tmpdir}/%{name}-%{version}-root-%(id -u -n)
 
 %description
@@ -55,12 +55,12 @@ OpenTTD data files.
 Pliki danych OpenTTD.
 
 %package server
-Summary:	OpenTTD dedicated server	
+Summary:	OpenTTD dedicated server
 Summary(pl):	Dedykowany serwer OpenTTD
 Group:		X11/Applications/Games
 Requires:	%{name}-data = %{version}-%{release}
 Provides:	%{name}-binary = %{version}-%{release}
-Obsoletes:	%{name}
+Obsoletes:	openttd
 
 %description server
 This package contains OpenTTD dedicated server. Note that
