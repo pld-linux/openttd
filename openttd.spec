@@ -5,16 +5,17 @@
 Summary:	An open source reimplementation of the Microprose game "Transport Tycoon Deluxe"
 Summary(pl):	Otwarta reimplementacja gry Transport Tycoon Deluxe
 Name:		openttd
-Version:	0.4.5
+Version:	0.4.7
 Release:	1
 License:	GPL
 Group:		X11/Applications/Games
-Source0:	http://dl.sourceforge.net/openttd/%{name}-%{version}.tar.bz2
-# Source0-md5:	691e626763f2f33ad3e77717a44d2824
+Source0:	http://ovh.dl.sourceforge.net/sourceforge/openttd/%{name}-%{version}-source.tar.bz2
+# Source0-md5:	7a7201ed0f6c1727ac22a977d20c7611
 Source1:	%{name}.desktop
 Source2:	%{name}-server.desktop
 Patch0:		%{name}-home_etc.patch
 Patch1:		%{name}-personal-data.patch
+Patch2:		%{name}-Makefile.patch
 URL:		http://www.openttd.com/
 BuildRequires:	SDL-devel
 %{?with_home_etc:BuildRequires:	home-etc-devel}
@@ -74,6 +75,7 @@ Ten pakiet zawiera dedykowany serwer OpenTTD. Nale¿y zwróciæ uwagê,
 %setup -q
 %{?with_home_etc:%patch0 -p1}
 #%patch1 -p1
+%patch2 -p1
 
 # Let's pldize
 find lang/ -type f -exec sed -i 's/:Unix/:PLD Linux/' \{\} \;
@@ -129,7 +131,7 @@ install -d $RPM_BUILD_ROOT{%{_desktopdir},%{_mandir}/man6,%{_pixmapsdir},%{_data
 	DATA_DIR="%{_datadir}/%{name}/"
 
 install openttd-dedicated $RPM_BUILD_ROOT%{_bindir}
-install scenario/* $RPM_BUILD_ROOT%{_datadir}/%{name}/scenario
+##install scenario/* $RPM_BUILD_ROOT%{_datadir}/%{name}/scenario
 install %{SOURCE1} $RPM_BUILD_ROOT%{_desktopdir}
 install %{SOURCE2} $RPM_BUILD_ROOT%{_desktopdir}
 install docs/openttd.6 $RPM_BUILD_ROOT%{_mandir}/man6
