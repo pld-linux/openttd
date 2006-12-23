@@ -5,17 +5,18 @@
 Summary:	An open source reimplementation of the Microprose game "Transport Tycoon Deluxe"
 Summary(pl):	Otwarta reimplementacja gry Transport Tycoon Deluxe
 Name:		openttd
-Version:	0.4.8
-Release:	1
+Version:	0.5.0
+%define		_rc	RC1
+Release:	0.%{_rc}
 License:	GPL
 Group:		X11/Applications/Games
-Source0:	http://ovh.dl.sourceforge.net/sourceforge/openttd/%{name}-%{version}-source.tar.bz2
-# Source0-md5:	de9643ee2009db73763941489ad08569
+Source0:	http://dl.sourceforge.net/openttd/%{name}-%{version}-%{_rc}-source.tar.bz2
+# Source0-md5:	18048152b32e2f351f14dd2c84d00b52
 Source1:	%{name}.desktop
 Source2:	%{name}-server.desktop
 Patch0:		%{name}-home_etc.patch
 Patch1:		%{name}-personal-data.patch
-Patch2:		%{name}-Makefile.patch
+Patch2:		%{name}-pthread.patch
 URL:		http://www.openttd.com/
 BuildRequires:	SDL-devel
 %{?with_home_etc:BuildRequires:	home-etc-devel}
@@ -72,10 +73,10 @@ Ten pakiet zawiera dedykowany serwer OpenTTD. Nale¿y zwróciæ uwagê,
 ¿e graficzny klient OpenTTD równie¿ posiada t± funkcjonalno¶æ.
 
 %prep
-%setup -q
+%setup -q -n %{name}-%{version}-%{_rc}
 %{?with_home_etc:%patch0 -p1}
 #%patch1 -p1
-%patch2 -p1
+%patch2 -p0
 
 # Let's pldize
 find lang/ -type f -exec sed -i 's/:Unix/:PLD Linux/' \{\} \;
@@ -84,8 +85,8 @@ find lang/ -type f -exec sed -i 's/:Unix/:PLD Linux/' \{\} \;
 %{__make} \
 	CC="%{__cc}" \
 	CXX="%{__cxx}" \
-	CFLAGS="%{rpmcflags} `sdl-config --cflags`" \
-	LDFLAGS="%{rpmldflags} -lpthread" \
+	CFLAGS="%{rpmcflags} `sdl-config --cflags` -I/usr/include/freetype2" \
+	LDFLAGS="%{rpmldflags}" \
 	INSTALL=1 \
 	PREFIX="" \
 	BINARY_DIR="%{_bindir}" \
@@ -104,8 +105,8 @@ mv openttd openttd-dedicated
 %{__make} \
 	CC="%{__cc}" \
 	CXX="%{__cxx}" \
-	CFLAGS="%{rpmcflags} `sdl-config --cflags`" \
-	LDFLAGS="%{rpmldflags} -lpthread" \
+	CFLAGS="%{rpmcflags} `sdl-config --cflags` -I/usr/include/freetype2" \
+	LDFLAGS="%{rpmldflags}" \
 	INSTALL=1 \
 	PREFIX="" \
 	BINARY_DIR="%{_bindir}" \
