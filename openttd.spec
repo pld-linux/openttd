@@ -3,7 +3,7 @@
 %bcond_without	home_etc	# without home_etc support
 #
 Summary:	An open source reimplementation of the Microprose game "Transport Tycoon Deluxe"
-Summary(pl):	Otwarta reimplementacja gry Transport Tycoon Deluxe
+Summary(pl.UTF-8):   Otwarta reimplementacja gry Transport Tycoon Deluxe
 Name:		openttd
 Version:	0.5.0
 %define		_rc	RC4
@@ -36,29 +36,29 @@ were inspired by TTDPatch while others are original.
 
 It requires the original Transport Tycoon Deluxe data files.
 
-%description -l pl
-OpenTTD powsta³ na bazie gry Transport Tycoon stworzonej przez Chrisa
-Sawyera, jego grywalno¶æ jest jednak du¿o wiêksza. Wiele rzeczy
-zosta³o zainspirowanych przez TTDPatch, du¿o jest jednak oryginalnych
-pomys³ów.
+%description -l pl.UTF-8
+OpenTTD powstaÅ‚ na bazie gry Transport Tycoon stworzonej przez Chrisa
+Sawyera, jego grywalnoÅ›Ä‡ jest jednak duÅ¼o wiÄ™ksza. Wiele rzeczy
+zostaÅ‚o zainspirowanych przez TTDPatch, duÅ¼o jest jednak oryginalnych
+pomysÅ‚Ã³w.
 
-Do uruchomienia wymagane s± pliki danych z Transport Tycoon Deluxe.
+Do uruchomienia wymagane sÄ… pliki danych z Transport Tycoon Deluxe.
 
 %package data
 Summary:	OpenTTD data files
-Summary(pl):	Pliki danych OpenTTD
+Summary(pl.UTF-8):   Pliki danych OpenTTD
 Group:		X11/Applications/Games
 Requires:	%{name}-binary = %{version}-%{release}
 
 %description data
 OpenTTD data files.
 
-%description data -l pl
+%description data -l pl.UTF-8
 Pliki danych OpenTTD.
 
 %package server
 Summary:	OpenTTD dedicated server
-Summary(pl):	Dedykowany serwer OpenTTD
+Summary(pl.UTF-8):   Dedykowany serwer OpenTTD
 Group:		X11/Applications/Games
 Requires:	%{name}-data = %{version}-%{release}
 Provides:	%{name}-binary = %{version}-%{release}
@@ -68,9 +68,9 @@ Obsoletes:	openttd
 This package contains OpenTTD dedicated server. Note that
 graphics-enabled OpenTTD client also has this functionality.
 
-%description server -l pl
-Ten pakiet zawiera dedykowany serwer OpenTTD. Nale¿y zwróciæ uwagê,
-¿e graficzny klient OpenTTD równie¿ posiada t± funkcjonalno¶æ.
+%description server -l pl.UTF-8
+Ten pakiet zawiera dedykowany serwer OpenTTD. NaleÅ¼y zwrÃ³ciÄ‡ uwagÄ™,
+Å¼e graficzny klient OpenTTD rÃ³wnieÅ¼ posiada tÄ… funkcjonalnoÅ›Ä‡.
 
 %prep
 %setup -q -n %{name}-%{version}-%{_rc}
