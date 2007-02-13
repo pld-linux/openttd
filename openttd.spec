@@ -3,7 +3,7 @@
 %bcond_without	home_etc	# without home_etc support
 #
 Summary:	An open source reimplementation of the Microprose game "Transport Tycoon Deluxe"
-Summary(pl.UTF-8):   Otwarta reimplementacja gry Transport Tycoon Deluxe
+Summary(pl.UTF-8):	Otwarta reimplementacja gry Transport Tycoon Deluxe
 Name:		openttd
 Version:	0.5.0
 %define		_rc	RC4
@@ -46,7 +46,7 @@ Do uruchomienia wymagane są pliki danych z Transport Tycoon Deluxe.
 
 %package data
 Summary:	OpenTTD data files
-Summary(pl.UTF-8):   Pliki danych OpenTTD
+Summary(pl.UTF-8):	Pliki danych OpenTTD
 Group:		X11/Applications/Games
 Requires:	%{name}-binary = %{version}-%{release}
 
@@ -58,7 +58,7 @@ Pliki danych OpenTTD.
 
 %package server
 Summary:	OpenTTD dedicated server
-Summary(pl.UTF-8):   Dedykowany serwer OpenTTD
+Summary(pl.UTF-8):	Dedykowany serwer OpenTTD
 Group:		X11/Applications/Games
 Requires:	%{name}-data = %{version}-%{release}
 Provides:	%{name}-binary = %{version}-%{release}
