@@ -6,7 +6,7 @@ Summary:	An open source reimplementation of the Microprose game "Transport Tycoo
 Summary(pl.UTF-8):	Otwarta reimplementacja gry Transport Tycoon Deluxe
 Name:		openttd
 Version:	0.5.0
-Release:	1
+Release:	0.1
 License:	GPL
 Group:		X11/Applications/Games
 Source0:	http://dl.sourceforge.net/openttd/%{name}-%{version}-source.tar.bz2
@@ -18,8 +18,10 @@ Patch1:		%{name}-personal-data.patch
 Patch2:		%{name}-pthread.patch
 URL:		http://www.openttd.com/
 BuildRequires:	SDL-devel
+BuildRequires:	freetype-devel
 %{?with_home_etc:BuildRequires:	home-etc-devel}
 BuildRequires:	libpng-devel
+BuildRequires:	libstdc++-devel
 BuildRequires:	sed >= 4
 BuildRequires:	zlib-devel
 Requires:	%{name}-data = %{version}-%{release}
@@ -77,6 +79,7 @@ Ten pakiet zawiera dedykowany serwer OpenTTD. Należy zwrócić uwagę,
 #%patch1 -p1
 %patch2 -p0
 
+%{__sed} 's/ifndef USE_HOMEDIR/ifdef USE_HOMEDIR/' -i Makefile
 # Let's pldize
 find lang/ -type f -exec sed -i 's/:Unix/:PLD Linux/' \{\} \;
 
@@ -96,10 +99,14 @@ find lang/ -type f -exec sed -i 's/:Unix/:PLD Linux/' \{\} \;
 	WITH_NETWORK=1 \
 	WITH_SDL= \
 	WITH_PNG= \
+	WITH_FREETYPE= \
+	WITH_FONTCONFIG= \
+	VERBOSE=1 \
 	DEDICATED=1
 
 mv openttd openttd-dedicated
 
+rm -f Makefile.config
 %{__make} clean
 %{__make} \
 	CC="%{__cc}" \
@@ -116,6 +123,10 @@ mv openttd openttd-dedicated
 	WITH_NETWORK=1 \
 	WITH_SDL=1 \
 	WITH_PNG=1 \
+	WITH_FREETYPE=1 \
+	WITH_FONTCONFIG=1 \
+	WITH_ICONV=1 \
+	VERBOSE=1 \
 	DEDICATED=0
 
 %install
