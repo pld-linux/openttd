@@ -1,6 +1,6 @@
 diff -ur openttd-0.5.1-RC2.orig/fileio.c openttd-0.5.1-RC2/fileio.c
 --- openttd-0.5.1-RC2.orig/fileio.c	2006-12-09 11:56:12.000000000 +0100
-+++ openttd-0.5.1-RC2/fileio.c	2007-03-29 21:53:06.000000000 +0200
++++ openttd-0.5.1-RC2/fileio.c	2007-03-30 13:17:18.000000000 +0200
 @@ -134,6 +134,11 @@
  		}
  #endif
@@ -15,7 +15,7 @@ diff -ur openttd-0.5.1-RC2.orig/fileio.c openttd-0.5.1-RC2/fileio.c
  	return f;
 diff -ur openttd-0.5.1-RC2.orig/gfxinit.c openttd-0.5.1-RC2/gfxinit.c
 --- openttd-0.5.1-RC2.orig/gfxinit.c	2007-02-08 11:04:57.000000000 +0100
-+++ openttd-0.5.1-RC2/gfxinit.c	2007-03-29 21:56:42.000000000 +0200
++++ openttd-0.5.1-RC2/gfxinit.c	2007-03-30 13:17:18.000000000 +0200
 @@ -135,6 +135,18 @@
  	}
  #endif
@@ -35,32 +35,74 @@ diff -ur openttd-0.5.1-RC2.orig/gfxinit.c openttd-0.5.1-RC2/gfxinit.c
  	if (f != NULL) {
  		md5_state_t filemd5state;
  		md5_byte_t buffer[1024];
+diff -ur openttd-0.5.1-RC2.orig/music_gui.c openttd-0.5.1-RC2/music_gui.c
+--- openttd-0.5.1-RC2.orig/music_gui.c	2007-01-17 01:05:51.000000000 +0100
++++ openttd-0.5.1-RC2/music_gui.c	2007-03-30 13:49:34.000000000 +0200
+@@ -13,6 +13,8 @@
+ #include "variables.h"
+ #include "music.h"
+ 
++#include <unistd.h>
++
+ static byte _music_wnd_cursong;
+ static bool _song_is_active;
+ static byte _cur_playlist[NUM_SONGS_PLAYLIST];
+@@ -91,6 +93,12 @@
+ 	char filename[256];
+ 	snprintf(filename, sizeof(filename), "%s%s",
+ 		_paths.gm_dir, origin_songs_specs[_music_wnd_cursong - 1].filename);
++	/* check if requested file exists and is readable,
++	 * if not, use personal gm path */
++	if (access(filename, R_OK) == -1 ) {
++		snprintf(filename, sizeof(filename), "%s%s",
++			_paths.personal_gm_dir, origin_songs_specs[_music_wnd_cursong - 1].filename);
++	}
+ 	_music_driver->play_song(filename);
+ }
+ 
+@@ -111,6 +119,13 @@
+ 			snprintf(filename, sizeof(filename),  "%s%s",
+ 				_paths.gm_dir, origin_songs_specs[(_playlists[msf.playlist][i]) - 1].filename);
+ 
++			/* check if requested file exists and is readable,
++			 * if not, use personal gm path */
++			if (access(filename, R_OK) == -1) {
++				snprintf(filename, sizeof(filename),  "%s%s",
++					_paths.personal_gm_dir, origin_songs_specs[(_playlists[msf.playlist][i]) - 1].filename);
++			}
++
+ 			/* we are now checking for the existence of that file prior
+ 			 * to add it to the list of available songs */
+ 			if (FileExists(filename)) {
 diff -ur openttd-0.5.1-RC2.orig/unix.c openttd-0.5.1-RC2/unix.c
 --- openttd-0.5.1-RC2.orig/unix.c	2007-03-19 21:17:24.000000000 +0100
-+++ openttd-0.5.1-RC2/unix.c	2007-03-29 21:50:11.000000000 +0200
-@@ -220,6 +220,7 @@
++++ openttd-0.5.1-RC2/unix.c	2007-03-30 13:17:18.000000000 +0200
+@@ -220,6 +220,8 @@
  	_paths.heightmap_dir = str_fmt("%sscenario/heightmap", _paths.personal_dir);
  	_paths.gm_dir = str_fmt("%sgm/", _paths.game_data_dir);
  	_paths.data_dir = str_fmt("%sdata/", _paths.game_data_dir);
++	_paths.personal_gm_dir = str_fmt("%sgm/", _paths.personal_dir);
 +	_paths.personal_data_dir = str_fmt("%sdata/", _paths.personal_dir);
  
  	if (_config_file == NULL)
  		_config_file = str_fmt("%sopenttd.cfg", _paths.personal_dir);
-@@ -241,6 +242,7 @@
+@@ -241,6 +243,8 @@
  	mkdir(_paths.autosave_dir, 0755);
  	mkdir(_paths.scenario_dir, 0755);
  	mkdir(_paths.heightmap_dir, 0755);
++	mkdir(_paths.personal_gm_dir, 0755);
 +	mkdir(_paths.personal_data_dir, 0755);
  }
  
  bool InsertTextBufferClipboard(Textbuf *tb)
 diff -ur openttd-0.5.1-RC2.orig/variables.h openttd-0.5.1-RC2/variables.h
 --- openttd-0.5.1-RC2.orig/variables.h	2007-02-08 11:19:03.000000000 +0100
-+++ openttd-0.5.1-RC2/variables.h	2007-03-29 21:49:13.000000000 +0200
-@@ -260,6 +260,7 @@
++++ openttd-0.5.1-RC2/variables.h	2007-03-30 13:17:18.000000000 +0200
+@@ -260,6 +260,8 @@
  	char *scenario_dir;
  	char *heightmap_dir;
  	char *second_data_dir;
++	char *personal_gm_dir;
 +	char *personal_data_dir;
  } Paths;
  
