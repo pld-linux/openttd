@@ -76,7 +76,7 @@ Ten pakiet zawiera dedykowany serwer OpenTTD. Należy zwrócić uwagę,
 %prep
 %setup -q
 %{?with_home_etc:%patch0 -p1}
-#%patch1 -p1
+%patch1 -p1
 %patch2 -p0
 
 %{__sed} 's/ifndef USE_HOMEDIR/ifdef USE_HOMEDIR/' -i Makefile
