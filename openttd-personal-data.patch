@@ -1,56 +1,109 @@
-diff -ruN openttd./fileio.c openttd/fileio.c
---- openttd./fileio.c	2004-12-07 18:16:57.000000000 +0100
-+++ openttd/fileio.c	2004-12-07 19:29:33.034947832 +0100
-@@ -121,6 +121,11 @@
+diff -ur openttd-0.5.1-RC2.orig/fileio.c openttd-0.5.1-RC2/fileio.c
+--- openttd-0.5.1-RC2.orig/fileio.c	2006-12-09 11:56:12.000000000 +0100
++++ openttd-0.5.1-RC2/fileio.c	2007-03-30 13:17:18.000000000 +0200
+@@ -134,6 +134,11 @@
  		}
  #endif
  	}
 +	if (f == NULL) {
-+		// Look for file in personal data dir
-+		sprintf(buf, "%s%s", _path.personal_data_dir, filename);
++		snprintf(buf, lengthof(buf), "%s%s", _paths.personal_data_dir, filename);
++		strtolower(buf + strlen(_paths.personal_data_dir) - 1);
 +		f = fopen(buf, "rb");
 +	}
  #endif
  
- 	if (f == NULL)
-@@ -167,6 +167,11 @@
- 		}
- #endif
+ 	return f;
+diff -ur openttd-0.5.1-RC2.orig/gfxinit.c openttd-0.5.1-RC2/gfxinit.c
+--- openttd-0.5.1-RC2.orig/gfxinit.c	2007-02-08 11:04:57.000000000 +0100
++++ openttd-0.5.1-RC2/gfxinit.c	2007-03-30 13:17:18.000000000 +0200
+@@ -135,6 +135,18 @@
  	}
-+	if (f == NULL) {
-+		// Look for file in personal data dir
-+		sprintf(buf, "%s%s", _path.personal_data_dir, filename);
-+		f = fopen(buf, "rb");
-+	}
  #endif
  
- 	if (f == NULL)
-diff -ruN openttd./unix.c openttd/unix.c
---- openttd./unix.c	2004-12-07 19:31:02.136402352 +0100
-+++ openttd/unix.c	2004-12-07 19:27:33.786076416 +0100
-@@ -507,6 +507,7 @@
- 	_path.scenario_dir = str_fmt("%sscenario", _path.personal_dir);
- 	_path.gm_dir = str_fmt("%sgm/", _path.game_data_dir);
- 	_path.data_dir = str_fmt("%sdata/", _path.game_data_dir);
-+	_path.personal_data_dir = str_fmt("%sdata/", _path.personal_dir);
++#if !defined(WIN32)
++	if (f == NULL) {
++		snprintf(buf, lengthof(buf), "%s%s", _paths.personal_data_dir, file.filename);
++		f = fopen(buf, "rb");
++
++		if (f == NULL) {
++			strtolower(buf + strlen(_paths.personal_data_dir) - 1);
++			f = fopen(buf, "rb");
++		}
++	}
++#endif
++
+ 	if (f != NULL) {
+ 		md5_state_t filemd5state;
+ 		md5_byte_t buffer[1024];
+diff -ur openttd-0.5.1-RC2.orig/music_gui.c openttd-0.5.1-RC2/music_gui.c
+--- openttd-0.5.1-RC2.orig/music_gui.c	2007-01-17 01:05:51.000000000 +0100
++++ openttd-0.5.1-RC2/music_gui.c	2007-03-30 13:49:34.000000000 +0200
+@@ -13,6 +13,8 @@
+ #include "variables.h"
+ #include "music.h"
  
- 	if (_config_file == NULL)
- 		_config_file = str_fmt("%sopenttd.cfg", _path.personal_dir);
-@@ -522,5 +523,6 @@
- 	mkdir(_path.save_dir, 0755);
- 	mkdir(_path.autosave_dir, 0755);
- 	mkdir(_path.scenario_dir, 0755);
-+	mkdir(_path.personal_data_dir, 0755);
++#include <unistd.h>
++
+ static byte _music_wnd_cursong;
+ static bool _song_is_active;
+ static byte _cur_playlist[NUM_SONGS_PLAYLIST];
+@@ -91,6 +93,12 @@
+ 	char filename[256];
+ 	snprintf(filename, sizeof(filename), "%s%s",
+ 		_paths.gm_dir, origin_songs_specs[_music_wnd_cursong - 1].filename);
++	/* check if requested file exists and is readable,
++	 * if not, use personal gm path */
++	if (access(filename, R_OK) == -1 ) {
++		snprintf(filename, sizeof(filename), "%s%s",
++			_paths.personal_gm_dir, origin_songs_specs[_music_wnd_cursong - 1].filename);
++	}
+ 	_music_driver->play_song(filename);
  }
  
-diff -ruN openttd./variables.h openttd/variables.h
---- openttd./variables.h	2004-12-07 18:16:57.000000000 +0100
-+++ openttd/variables.h	2004-12-07 19:25:40.088361096 +0100
-@@ -193,6 +193,7 @@
- typedef struct Paths {
- 	char *personal_dir;  // includes cfg file and save folder
- 	char *game_data_dir; // includes data, gm, lang
-+	char *personal_data_dir; // personal game data, like newgrf files
- 	char *data_dir;
- 	char *gm_dir;
- 	char *lang_dir;
+@@ -111,6 +119,13 @@
+ 			snprintf(filename, sizeof(filename),  "%s%s",
+ 				_paths.gm_dir, origin_songs_specs[(_playlists[msf.playlist][i]) - 1].filename);
+ 
++			/* check if requested file exists and is readable,
++			 * if not, use personal gm path */
++			if (access(filename, R_OK) == -1) {
++				snprintf(filename, sizeof(filename),  "%s%s",
++					_paths.personal_gm_dir, origin_songs_specs[(_playlists[msf.playlist][i]) - 1].filename);
++			}
++
+ 			/* we are now checking for the existence of that file prior
+ 			 * to add it to the list of available songs */
+ 			if (FileExists(filename)) {
+diff -ur openttd-0.5.1-RC2.orig/unix.c openttd-0.5.1-RC2/unix.c
+--- openttd-0.5.1-RC2.orig/unix.c	2007-03-19 21:17:24.000000000 +0100
++++ openttd-0.5.1-RC2/unix.c	2007-03-30 13:17:18.000000000 +0200
+@@ -220,6 +220,8 @@
+ 	_paths.heightmap_dir = str_fmt("%sscenario/heightmap", _paths.personal_dir);
+ 	_paths.gm_dir = str_fmt("%sgm/", _paths.game_data_dir);
+ 	_paths.data_dir = str_fmt("%sdata/", _paths.game_data_dir);
++	_paths.personal_gm_dir = str_fmt("%sgm/", _paths.personal_dir);
++	_paths.personal_data_dir = str_fmt("%sdata/", _paths.personal_dir);
+ 
+ 	if (_config_file == NULL)
+ 		_config_file = str_fmt("%sopenttd.cfg", _paths.personal_dir);
+@@ -241,6 +243,8 @@
+ 	mkdir(_paths.autosave_dir, 0755);
+ 	mkdir(_paths.scenario_dir, 0755);
+ 	mkdir(_paths.heightmap_dir, 0755);
++	mkdir(_paths.personal_gm_dir, 0755);
++	mkdir(_paths.personal_data_dir, 0755);
+ }
+ 
+ bool InsertTextBufferClipboard(Textbuf *tb)
+diff -ur openttd-0.5.1-RC2.orig/variables.h openttd-0.5.1-RC2/variables.h
+--- openttd-0.5.1-RC2.orig/variables.h	2007-02-08 11:19:03.000000000 +0100
++++ openttd-0.5.1-RC2/variables.h	2007-03-30 13:17:18.000000000 +0200
+@@ -260,6 +260,8 @@
+ 	char *scenario_dir;
+ 	char *heightmap_dir;
+ 	char *second_data_dir;
++	char *personal_gm_dir;
++	char *personal_data_dir;
+ } Paths;
+ 
+ VARDEF Paths _paths;
