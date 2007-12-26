@@ -6,7 +6,6 @@ TryExec=openttd
 Exec=openttd
 Terminal=false
 Type=Application
-Encoding=UTF-8
 Categories=Game;StrategyGame;
 Icon=openttd
 # vi: encoding=utf-8
