@@ -5,16 +5,17 @@
 Summary:	An open source reimplementation of the Microprose game "Transport Tycoon Deluxe"
 Summary(pl.UTF-8):	Otwarta reimplementacja gry Transport Tycoon Deluxe
 Name:		openttd
-Version:	0.6.0
+Version:	0.5.3
 Release:	1
 License:	GPL
 Group:		X11/Applications/Games
 Source0:	http://dl.sourceforge.net/openttd/%{name}-%{version}-source.tar.bz2
-# Source0-md5:	dcf63687c73ff56887049fedaf6c6019
+# Source0-md5:	592c047903a3e7f17f95279f77b8a1dd
 Source1:	%{name}.desktop
 Source2:	%{name}-server.desktop
 Patch0:		%{name}-home_etc.patch
 Patch1:		%{name}-personal-data.patch
+Patch2:		%{name}-pthread.patch
 URL:		http://www.openttd.com/
 BuildRequires:	SDL-devel
 BuildRequires:	freetype-devel
@@ -75,14 +76,14 @@ Ten pakiet zawiera dedykowany serwer OpenTTD. Należy zwrócić uwagę,
 %prep
 %setup -q
 %{?with_home_etc:%patch0 -p1}
-#%patch1 -p1
+%patch1 -p1
+%patch2 -p0
 
+%{__sed} 's/ifndef USE_HOMEDIR/ifdef USE_HOMEDIR/' -i Makefile
 # Let's pldize
-find src/lang/ -type f -exec sed -i 's/:Unix/:PLD Linux/' \{\} \;
+find lang/ -type f -exec sed -i 's/:Unix/:PLD Linux/' \{\} \;
 
 %build
-./configure \
-	%{?with_home_etc:--:
 %{__make} \
 	CC="%{__cc}" \
 	CXX="%{__cxx}" \
