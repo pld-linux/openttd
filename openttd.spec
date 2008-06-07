@@ -1,21 +1,27 @@
 #
+# ToDo:
+# - review -home_etc.patch
+# - complains about polish fonts,
+#
 # Conditional build:
 %bcond_without	home_etc	# without home_etc support
 #
 Summary:	An open source reimplementation of the Microprose game "Transport Tycoon Deluxe"
 Summary(pl.UTF-8):	Otwarta reimplementacja gry Transport Tycoon Deluxe
 Name:		openttd
-Version:	0.5.3
-Release:	1
+Version:	0.6.1
+Release:	0.1
 License:	GPL
 Group:		X11/Applications/Games
 Source0:	http://dl.sourceforge.net/openttd/%{name}-%{version}-source.tar.bz2
-# Source0-md5:	592c047903a3e7f17f95279f77b8a1dd
-Source1:	%{name}.desktop
-Source2:	%{name}-server.desktop
+# Source0-md5:	f7c0f19dcca051cd28641109d795f202
+Source1:	http://dl.sourceforge.net/openttd/%{name}-0.4.8-scenarios.tar.bz2
+# Source1-md5:	34e8cb13ce1d4e6b5b24887c628c1ac8
+Source2:	http://dl.sourceforge.net/openttd/%{name}-0.5.0-scenarios.tar.bz2
+# Source2-md5:	37892f1fdded957f956766642a9e877d
+Source3:	%{name}.desktop
+Source4:	%{name}-server.desktop
 Patch0:		%{name}-home_etc.patch
-Patch1:		%{name}-personal-data.patch
-Patch2:		%{name}-pthread.patch
 URL:		http://www.openttd.com/
 BuildRequires:	SDL-devel
 BuildRequires:	freetype-devel
@@ -75,57 +81,66 @@ Ten pakiet zawiera dedykowany serwer OpenTTD. Należy zwrócić uwagę,
 
 %prep
 %setup -q
+cd bin/scenario
+tar xvjf %{SOURCE1}
+tar xvjf %{SOURCE2}
+mv openttd-0.4.8-RC1-scenarios/* .
+rmdir openttd-0.4.8-RC1-scenarios heightmap
+cd ../..
 %{?with_home_etc:%patch0 -p1}
-%patch1 -p1
-%patch2 -p0
 
-%{__sed} 's/ifndef USE_HOMEDIR/ifdef USE_HOMEDIR/' -i Makefile
 # Let's pldize
-find lang/ -type f -exec sed -i 's/:Unix/:PLD Linux/' \{\} \;
+find src/lang/ -type f -exec sed -i 's/:Unix/:PLD Linux/' \{\} \;
 
 %build
-%{__make} \
+
+# dedicated
+./configure \
 	CC="%{__cc}" \
 	CXX="%{__cxx}" \
-	CFLAGS="%{rpmcflags} `sdl-config --cflags` -I/usr/include/freetype2" \
-	LDFLAGS="%{rpmldflags}" \
+	CFLAGS="%{rpmcflags}" \
+	--prefix-dir="%{_prefix}" \
+	--binary-dir=bin \
+	--data-dir=share/openttd \
+	--icon-dir=share/pixmaps \
+	--install-dir=$RPM_BUILD_ROOT \
+	--os=UNIX \
+	--without-sdl \
+	--without-zlib \
+	--without-png \
+	--without-freetype \
+	--without-fontconfig
+
+%{__make} \
+	MANUAL_CONFIG=1 \
 	INSTALL=1 \
-	PREFIX="" \
-	BINARY_DIR="%{_bindir}" \
-	DATA_DIR="%{_datadir}/%{name}/" \
-	PERSONAL_DIR=".%{name}" \
-	%{?with_home_etc:WITH_HOME_ETC=1} \
-	USE_HOMEDIR=1 \
-	WITH_NETWORK=1 \
-	WITH_SDL= \
-	WITH_PNG= \
-	WITH_FREETYPE= \
-	WITH_FONTCONFIG= \
 	VERBOSE=1 \
 	DEDICATED=1
 
-mv openttd openttd-dedicated
+mv bin/openttd{,-dedicated}
 
+# client
 rm -f Makefile.config
 %{__make} clean
-%{__make} \
+./configure \
 	CC="%{__cc}" \
 	CXX="%{__cxx}" \
 	CFLAGS="%{rpmcflags} `sdl-config --cflags` -I/usr/include/freetype2" \
-	LDFLAGS="%{rpmldflags}" \
+	--prefix-dir="%{_prefix}" \
+	--binary-dir=bin \
+	--data-dir=share/openttd \
+	--icon-dir=share/pixmaps \
+	--install-dir=$RPM_BUILD_ROOT \
+	--os=UNIX \
+	--with-sdl \
+	--with-zlib \
+	--with-png \
+	--with-freetype \
+	--with-fontconfig
+
+%{__make} \
+	MANUAL_CONFIG=1 \
 	INSTALL=1 \
-	PREFIX="" \
-	BINARY_DIR="%{_bindir}" \
-	DATA_DIR="%{_datadir}/%{name}/" \
-	PERSONAL_DIR=".%{name}" \
-	%{?with_home_etc:WITH_HOME_ETC=1} \
-	USE_HOMEDIR=1 \
-	WITH_NETWORK=1 \
-	WITH_SDL=1 \
-	WITH_PNG=1 \
-	WITH_FREETYPE=1 \
-	WITH_FONTCONFIG=1 \
-	WITH_ICONV=1 \
 	VERBOSE=1 \
 	DEDICATED=0
 
@@ -135,16 +150,15 @@ rm -rf $RPM_BUILD_ROOT
 install -d $RPM_BUILD_ROOT{%{_desktopdir},%{_mandir}/man6,%{_pixmapsdir},%{_datadir}/%{name}/scenario}
 
 %{__make} install \
-	DEST_DIR=$RPM_BUILD_ROOT \
+	INSTALL_DIR=$RPM_BUILD_ROOT \
 	INSTALL=1 \
+	VERBOSE=1 \
 	PREFIX="/" \
-	BINARY_DIR="%{_bindir}" \
-	DATA_DIR="%{_datadir}/%{name}/"
 
-install openttd-dedicated $RPM_BUILD_ROOT%{_bindir}
-##install scenario/* $RPM_BUILD_ROOT%{_datadir}/%{name}/scenario
-install %{SOURCE1} $RPM_BUILD_ROOT%{_desktopdir}
-install %{SOURCE2} $RPM_BUILD_ROOT%{_desktopdir}
+install bin/openttd-dedicated $RPM_BUILD_ROOT%{_bindir}
+install bin/scenario/* $RPM_BUILD_ROOT%{_datadir}/%{name}/scenario
+install %{SOURCE3} $RPM_BUILD_ROOT%{_desktopdir}
+install %{SOURCE4} $RPM_BUILD_ROOT%{_desktopdir}
 install docs/openttd.6 $RPM_BUILD_ROOT%{_mandir}/man6
 install media/openttd.256.png $RPM_BUILD_ROOT%{_pixmapsdir}/openttd.png
 
@@ -160,7 +174,7 @@ rm -rf $RPM_BUILD_ROOT
 
 %files data
 %defattr(644,root,root,755)
-%doc scripts
+%doc bin/scripts
 %{_datadir}/%{name}
 %{_pixmapsdir}/*
 
