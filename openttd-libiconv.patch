@@ -1,0 +1,10 @@
+--- openttd-0.6.1/config.lib	2008-01-15 21:55:36.000000000 +0100
++++ openttd-0.6.1/config.lib_new	2008-01-16 16:55:39.000000000 +0100
+@@ -1134,7 +1134,6 @@
+ 
+ 	if [ "$with_iconv" != "0" ]; then
+ 		CFLAGS="$CFLAGS -DWITH_ICONV"
+-		LIBS="$LIBS -liconv"
+ 		if [ "$with_iconv" != "2" ]; then
+ 			CFLAGS="$CFLAGS -I$with_iconv/include"
+ 			LIBS="$LIBS -L$with_iconv/lib"
