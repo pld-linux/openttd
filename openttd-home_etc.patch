@@ -1,53 +1,67 @@
-diff -urN openttd-orig/Makefile openttd/Makefile
---- openttd-orig/Makefile	2004-06-11 23:50:52.583070112 +0200
-+++ openttd/Makefile	2004-06-12 00:00:55.165463664 +0200
-@@ -48,6 +48,7 @@
- # WITH_PNG: screenshots using PNG
- # WITH_SDL: SDL video driver support
- # WITH_COCOA: Cocoa video driver support
-+# WITH_HOME_ETC: with home_etc support
- #
- # Summary of other defines:
- # MANUAL_CONFIG: do not use Makefile.config, config options set manually
-@@ -300,6 +301,12 @@
- 	endif
- endif
+diff -burN openttd-0.6.0.orig/config.lib openttd-0.6.0/config.lib
+--- openttd-0.6.0.orig/config.lib	2008-04-06 12:28:03.600539135 +0200
++++ openttd-0.6.0/config.lib	2008-04-06 12:31:30.843779880 +0200
+@@ -50,6 +50,7 @@
+ 	with_application_bundle="1"
+ 	with_sdl="1"
+ 	with_cocoa="1"
++	with_home_etc="1"
+ 	with_zlib="1"
+ 	with_png="1"
+ 	with_makedepend="1"
+@@ -107,6 +108,7 @@
+ 		with_application_bundle
+ 		with_sdl
+ 		with_cocoa
++		with_home_etc
+ 		with_zlib
+ 		with_png
+ 		with_makedepend
+@@ -251,6 +253,9 @@
+ 			--without-cocoa)              with_cocoa="0";;
+ 			--with-cocoa=*)               with_cocoa="$optarg";;
  
-+# home_etc support
-+ifdef WITH_HOME_ETC
-+CDEFS += -DWITH_HOME_ETC
-+LIBS += -lhome_etc
-+endif
++			--with-home-etc)              with_home_etc="1";;
++			--without-home-etc)           with_home_etc="0";;
 +
- # libpng config
- ifdef WITH_PNG
- CDEFS += -DWITH_PNG
-diff -urN openttd-orig/unix.c openttd/unix.c
---- openttd-orig/unix.c	2004-06-11 22:56:02.000000000 +0200
-+++ openttd/unix.c	2004-06-11 23:58:37.681364424 +0200
-@@ -17,6 +17,10 @@
- #include <SDL.h>
- #endif
+ 			--with-zlib)                  with_zlib="2";;
+ 			--without-zlib)               with_zlib="0";;
+ 			--with-zlib=*)                with_zlib="$optarg";;
+@@ -1049,6 +1054,11 @@
+ 		fi
+ 	fi
  
-+#if defined(WITH_HOME_ETC)
++	if [ "$with_home_etc" != 0 ]; then
++		CFLAGS="$CFLAGS -DWITH_HOME_ETC"
++		LIBS="$LIBS -lhome_etc"
++	fi
++
+ 	if [ "$with_zlib" != "0" ]; then
+ 		if [ "$enable_static" != "0" ] && [ "$os" != "OSX" ]; then
+ 			LIBS="$LIBS $zlib"
+diff -burN openttd-0.6.0.orig/src/fileio.cpp openttd-0.6.0/src/fileio.cpp
+--- openttd-0.6.0.orig/src/fileio.cpp	2008-04-06 12:28:02.523820995 +0200
++++ openttd-0.6.0/src/fileio.cpp	2008-04-06 12:37:30.727651048 +0200
+@@ -19,6 +19,10 @@
+ #endif
+ #include <sys/stat.h>
+ 
++#ifdef HOME_ETC
 +#include <home_etc.h>
 +#endif
 +
- #ifdef __MORPHOS__
- #include <exec/types.h>
- ULONG __stack = (1024*1024)*2; // maybe not that much is needed actually ;)
-@@ -492,9 +492,13 @@
- 	ttd_strlcpy(_path.second_data_dir, SECOND_DATA_DIR, MAX_PATH);
- 	#endif
- 
--#if defined(USE_HOMEDIR)
-+#if defined(USE_HOMEDIR) || defined(WITH_HOME_ETC)
- 	{
-+#if defined(WITH_HOME_ETC)
-+		const char *homedir = _HEdir;
+ /*************************************************/
+ /* FILE IO ROUTINES ******************************/
+ /*************************************************/
+@@ -647,7 +651,11 @@
+ #if defined(__MORPHOS__) || defined(__AMIGA__) || !defined(WITH_PERSONAL_DIR)
+ 	_searchpaths[SP_PERSONAL_DIR] = NULL;
+ #else
++#ifdef HOME_ETC
++	const char *hometdir = _HEdir;
 +#else
- 		const char *homedir = getenv("HOME");
+ 	const char *homedir = getenv("HOME");
 +#endif
  
- 		if (homedir == NULL) {
- 			const struct passwd *pw = getpwuid(getuid());
+ 	if (homedir == NULL) {
+ 		const struct passwd *pw = getpwuid(getuid());
