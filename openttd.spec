@@ -1,7 +1,6 @@
 #
 # ToDo:
 # - review -home_etc.patch
-# - complains about polish fonts,
 #
 # Conditional build:
 %bcond_without	home_etc	# without home_etc support
@@ -10,7 +9,7 @@ Summary:	An open source reimplementation of the Microprose game "Transport Tycoo
 Summary(pl.UTF-8):	Otwarta reimplementacja gry Transport Tycoon Deluxe
 Name:		openttd
 Version:	0.6.1
-Release:	0.1
+Release:	0.2
 License:	GPL
 Group:		X11/Applications/Games
 Source0:	http://dl.sourceforge.net/openttd/%{name}-%{version}-source.tar.bz2
@@ -22,6 +21,7 @@ Source2:	http://dl.sourceforge.net/openttd/%{name}-0.5.0-scenarios.tar.bz2
 Source3:	%{name}.desktop
 Source4:	%{name}-server.desktop
 Patch0:		%{name}-home_etc.patch
+Patch1:		%{name}-libiconv.patch
 URL:		http://www.openttd.com/
 BuildRequires:	SDL-devel
 BuildRequires:	freetype-devel
@@ -34,6 +34,7 @@ Requires:	%{name}-data = %{version}-%{release}
 Requires:	TiMidity++
 Provides:	%{name}-binary = %{version}-%{release}
 Obsoletes:	openttd-server
+Suggests:	TiMidity++
 BuildRoot:	%{tmpdir}/%{name}-%{version}-root-%(id -u -n)
 
 %description
@@ -88,6 +89,7 @@ mv openttd-0.4.8-RC1-scenarios/* .
 rmdir openttd-0.4.8-RC1-scenarios heightmap
 cd ../..
 %{?with_home_etc:%patch0 -p1}
+%patch1 -p1
 
 # Let's pldize
 find src/lang/ -type f -exec sed -i 's/:Unix/:PLD Linux/' \{\} \;
@@ -136,7 +138,9 @@ rm -f Makefile.config
 	--with-zlib \
 	--with-png \
 	--with-freetype \
-	--with-fontconfig
+	--with-fontconfig \
+	--with-iconv \
+	--with-midi=/usr/bin/timidity
 
 %{__make} \
 	MANUAL_CONFIG=1 \
