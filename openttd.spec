@@ -31,7 +31,6 @@ BuildRequires:	libstdc++-devel
 BuildRequires:	sed >= 4
 BuildRequires:	zlib-devel
 Requires:	%{name}-data = %{version}-%{release}
-Requires:	TiMidity++
 Provides:	%{name}-binary = %{version}-%{release}
 Obsoletes:	openttd-server
 Suggests:	TiMidity++
