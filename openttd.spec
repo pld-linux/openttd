@@ -99,7 +99,13 @@ find src/lang/ -type f -exec sed -i 's/:Unix/:PLD Linux/' \{\} \;
 ./configure \
 	CC="%{__cc}" \
 	CXX="%{__cxx}" \
-	CFLAGS="%{rpmcflags}" \
+	CFLAGS="%{rpmcxxflags}" \
+	LDFLAGS="%{rpmldflags}" \
+	--cc-host="%{__cc}" \
+	--cc-build="%{__cc}" \
+	--cxx-host="%{__cxx}" \
+	--cxx-build="%{__cxx}" \
+	--disable-strip \
 	--prefix-dir="%{_prefix}" \
 	--binary-dir=bin \
 	--data-dir=share/openttd \
@@ -126,7 +132,13 @@ rm -f Makefile.config
 ./configure \
 	CC="%{__cc}" \
 	CXX="%{__cxx}" \
-	CFLAGS="%{rpmcflags} `sdl-config --cflags` -I/usr/include/freetype2" \
+	CFLAGS="%{rpmcxxflags} $(sdl-config --cflags) -I/usr/include/freetype2" \
+	LDFLAGS="%{rpmldflags}" \
+	--cc-host="%{__cc}" \
+	--cc-build="%{__cc}" \
+	--cxx-host="%{__cxx}" \
+	--cxx-build="%{__cxx}" \
+	--disable-strip \
 	--prefix-dir="%{_prefix}" \
 	--binary-dir=bin \
 	--data-dir=share/openttd \
