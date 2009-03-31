@@ -1,7 +1,4 @@
 #
-# ToDo:
-# - review -home_etc.patch
-#
 # Conditional build:
 %bcond_without	home_etc	# without home_etc support
 #
@@ -9,7 +6,7 @@ Summary:	An open source reimplementation of the Microprose game "Transport Tycoo
 Summary(pl.UTF-8):	Otwarta reimplementacja gry Transport Tycoon Deluxe
 Name:		openttd
 Version:	0.6.3
-Release:	0.1
+Release:	1
 License:	GPL
 Group:		X11/Applications/Games
 Source0:	http://dl.sourceforge.net/openttd/%{name}-%{version}-source.tar.bz2
