@@ -110,8 +110,9 @@ find src/lang/ -type f -exec %{__sed} -i 's/:Unix/:PLD Linux/' \{\} \;
 	--icon-dir=share/pixmaps \
 	--install-dir=$RPM_BUILD_ROOT \
 	--os=UNIX \
+	--enable-dedicated \
 	--without-sdl \
-	--without-zlib \
+	--with-zlib \
 	--without-png \
 	--without-freetype \
 	--without-fontconfig
@@ -119,8 +120,7 @@ find src/lang/ -type f -exec %{__sed} -i 's/:Unix/:PLD Linux/' \{\} \;
 %{__make} \
 	MANUAL_CONFIG=1 \
 	INSTALL=1 \
-	VERBOSE=1 \
-	DEDICATED=1
+	VERBOSE=1
 
 mv bin/openttd{,-dedicated}
 
@@ -154,8 +154,7 @@ rm -f Makefile.config
 %{__make} \
 	MANUAL_CONFIG=1 \
 	INSTALL=1 \
-	VERBOSE=1 \
-	DEDICATED=0
+	VERBOSE=1
 
 %install
 rm -rf $RPM_BUILD_ROOT
