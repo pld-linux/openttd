@@ -111,11 +111,13 @@ find src/lang/ -type f -exec %{__sed} -i 's/:Unix/:PLD Linux/' \{\} \;
 	--install-dir=$RPM_BUILD_ROOT \
 	--os=UNIX \
 	--enable-dedicated \
+	--without-allegro \
 	--without-sdl \
 	--with-zlib \
 	--without-png \
 	--without-freetype \
-	--without-fontconfig
+	--without-fontconfig \
+	--without-libtimidity
 
 %{__make} \
 	MANUAL_CONFIG=1 \
@@ -143,11 +145,13 @@ rm -f Makefile.config
 	--icon-dir=share/pixmaps \
 	--install-dir=$RPM_BUILD_ROOT \
 	--os=UNIX \
+	--without-allegro \
 	--with-sdl \
 	--with-zlib \
 	--with-png \
 	--with-freetype \
 	--with-fontconfig \
+	--without-libtimidity \
 	--with-iconv \
 	--with-midi=/usr/bin/timidity
 
