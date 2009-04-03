@@ -149,7 +149,7 @@ rm -f Makefile.config
 	--with-freetype \
 	--with-fontconfig \
 	--with-iconv \
-	--with-midi=%{_bindir}/timidity
+	--with-midi=/usr/bin/timidity
 
 %{__make} \
 	MANUAL_CONFIG=1 \
