@@ -187,6 +187,7 @@ rm -rf $RPM_BUILD_ROOT
 %attr(755,root,root) %{_bindir}/%{name}
 %{_desktopdir}/%{name}.desktop
 %{_mandir}/man6/openttd.*
+%{_iconsdir}/*/*/*/openttd.png
 
 %files data
 %defattr(644,root,root,755)
