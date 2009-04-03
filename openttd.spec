@@ -5,12 +5,12 @@
 Summary:	An open source reimplementation of the Microprose game "Transport Tycoon Deluxe"
 Summary(pl.UTF-8):	Otwarta reimplementacja gry Transport Tycoon Deluxe
 Name:		openttd
-Version:	0.6.3
+Version:	0.7.0
 Release:	1
-License:	GPL
+License:	GPL v2+
 Group:		X11/Applications/Games
 Source0:	http://dl.sourceforge.net/openttd/%{name}-%{version}-source.tar.bz2
-# Source0-md5:	d05b9ebf67c83f07e8286d0d2b1fc293
+# Source0-md5:	3185dccdb094ada9a1f3f610965c15bc
 Source1:	http://dl.sourceforge.net/openttd/%{name}-0.4.8-scenarios.tar.bz2
 # Source1-md5:	34e8cb13ce1d4e6b5b24887c628c1ac8
 Source2:	http://dl.sourceforge.net/openttd/%{name}-0.5.0-scenarios.tar.bz2
@@ -78,17 +78,18 @@ Ten pakiet zawiera dedykowany serwer OpenTTD. Należy zwrócić uwagę,
 
 %prep
 %setup -q
+mkdir bin/scenario
 cd bin/scenario
 tar xvjf %{SOURCE1}
 tar xvjf %{SOURCE2}
 mv openttd-0.4.8-RC1-scenarios/* .
-rmdir openttd-0.4.8-RC1-scenarios heightmap
+rmdir openttd-0.4.8-RC1-scenarios
 cd ../..
 %{?with_home_etc:%patch0 -p1}
 %patch1 -p1
 
 # Let's pldize
-find src/lang/ -type f -exec sed -i 's/:Unix/:PLD Linux/' \{\} \;
+find src/lang/ -type f -exec %{__sed} -i 's/:Unix/:PLD Linux/' \{\} \;
 
 %build
 
@@ -182,13 +183,13 @@ rm -rf $RPM_BUILD_ROOT
 %doc changelog.txt known-bugs.txt readme.txt docs/{Manual.txt,multiplayer.txt}
 %attr(755,root,root) %{_bindir}/%{name}
 %{_desktopdir}/%{name}.desktop
-%{_mandir}/man6/*
+%{_mandir}/man6/openttd.*
 
 %files data
 %defattr(644,root,root,755)
 %doc bin/scripts
 %{_datadir}/%{name}
-%{_pixmapsdir}/*
+%{_pixmapsdir}/openttd.*
 
 %files server
 %defattr(644,root,root,755)
