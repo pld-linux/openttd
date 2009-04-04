@@ -11,12 +11,8 @@ License:	GPL v2+
 Group:		X11/Applications/Games
 Source0:	http://dl.sourceforge.net/openttd/%{name}-%{version}-source.tar.bz2
 # Source0-md5:	3185dccdb094ada9a1f3f610965c15bc
-Source1:	http://dl.sourceforge.net/openttd/%{name}-0.4.8-scenarios.tar.bz2
-# Source1-md5:	34e8cb13ce1d4e6b5b24887c628c1ac8
-Source2:	http://dl.sourceforge.net/openttd/%{name}-0.5.0-scenarios.tar.bz2
-# Source2-md5:	37892f1fdded957f956766642a9e877d
-Source3:	%{name}.desktop
-Source4:	%{name}-server.desktop
+Source1:	%{name}.desktop
+Source2:	%{name}-server.desktop
 Patch0:		%{name}-home_etc.patch
 Patch1:		%{name}-libiconv.patch
 URL:		http://www.openttd.com/
@@ -29,7 +25,7 @@ BuildRequires:	sed >= 4
 BuildRequires:	zlib-devel
 Requires:	%{name}-data = %{version}-%{release}
 Provides:	%{name}-binary = %{version}-%{release}
-Obsoletes:	openttd-server
+Suggests:	%{name}-ai
 Suggests:	TiMidity++
 BuildRoot:	%{tmpdir}/%{name}-%{version}-root-%(id -u -n)
 
@@ -52,7 +48,6 @@ Do uruchomienia wymagane są pliki danych z Transport Tycoon Deluxe.
 Summary:	OpenTTD data files
 Summary(pl.UTF-8):	Pliki danych OpenTTD
 Group:		X11/Applications/Games
-Requires:	%{name}-binary = %{version}-%{release}
 
 %description data
 OpenTTD data files.
@@ -66,7 +61,6 @@ Summary(pl.UTF-8):	Dedykowany serwer OpenTTD
 Group:		X11/Applications/Games
 Requires:	%{name}-data = %{version}-%{release}
 Provides:	%{name}-binary = %{version}-%{release}
-Obsoletes:	openttd
 
 %description server
 This package contains OpenTTD dedicated server. Note that
@@ -78,13 +72,6 @@ Ten pakiet zawiera dedykowany serwer OpenTTD. Należy zwrócić uwagę,
 
 %prep
 %setup -q
-mkdir bin/scenario
-cd bin/scenario
-tar xvjf %{SOURCE1}
-tar xvjf %{SOURCE2}
-mv openttd-0.4.8-RC1-scenarios/* .
-rmdir openttd-0.4.8-RC1-scenarios
-cd ../..
 %{?with_home_etc:%patch0 -p1}
 %patch1 -p1
 
@@ -163,7 +150,8 @@ rm -f Makefile.config
 %install
 rm -rf $RPM_BUILD_ROOT
 
-install -d $RPM_BUILD_ROOT{%{_desktopdir},%{_mandir}/man6,%{_pixmapsdir},%{_datadir}/%{name}/scenario}
+install -d $RPM_BUILD_ROOT{%{_desktopdir},%{_mandir}/man6,%{_pixmapsdir}}
+install -d $RPM_BUILD_ROOT%{_datadir}/%{name}/{ai/library,scenario/heightmap}
 
 %{__make} install \
 	INSTALL_DIR=$RPM_BUILD_ROOT \
@@ -172,9 +160,8 @@ install -d $RPM_BUILD_ROOT{%{_desktopdir},%{_mandir}/man6,%{_pixmapsdir},%{_data
 	PREFIX="/" \
 
 install bin/openttd-dedicated $RPM_BUILD_ROOT%{_bindir}
-install bin/scenario/* $RPM_BUILD_ROOT%{_datadir}/%{name}/scenario
-install %{SOURCE3} $RPM_BUILD_ROOT%{_desktopdir}
-install %{SOURCE4} $RPM_BUILD_ROOT%{_desktopdir}
+install %{SOURCE1} $RPM_BUILD_ROOT%{_desktopdir}
+install %{SOURCE2} $RPM_BUILD_ROOT%{_desktopdir}
 install docs/openttd.6 $RPM_BUILD_ROOT%{_mandir}/man6
 install media/openttd.256.png $RPM_BUILD_ROOT%{_pixmapsdir}/openttd.png
 
