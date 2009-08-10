@@ -15,7 +15,7 @@ Source1:	%{name}.desktop
 Source2:	%{name}-server.desktop
 Patch0:		%{name}-home_etc.patch
 Patch1:		%{name}-libiconv.patch
-URL:		http://www.openttd.com/
+URL:		http://www.openttd.org/
 BuildRequires:	SDL-devel
 BuildRequires:	freetype-devel
 %{?with_home_etc:BuildRequires:	home-etc-devel}
