@@ -17,10 +17,12 @@ Patch0:		%{name}-home_etc.patch
 Patch1:		%{name}-libiconv.patch
 URL:		http://www.openttd.org/
 BuildRequires:	SDL-devel
+BuildRequires:	fontconfig-devel
 BuildRequires:	freetype-devel
 %{?with_home_etc:BuildRequires:	home-etc-devel}
 BuildRequires:	libpng-devel
 BuildRequires:	libstdc++-devel
+BuildRequires:	pkgconfig
 BuildRequires:	sed >= 4.0
 BuildRequires:	zlib-devel
 Requires:	%{name}-data = %{version}-%{release}
@@ -140,7 +142,7 @@ rm -f Makefile.config
 	--with-fontconfig \
 	--without-libtimidity \
 	--with-iconv \
-	--with-midi=/usr/bin/timidity
+	--with-midi=%{_bindir}/timidity
 
 %{__make} \
 	MANUAL_CONFIG=1 \
