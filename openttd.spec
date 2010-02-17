@@ -2,7 +2,7 @@
 # Conditional build:
 %bcond_without	home_etc	# without home_etc support
 
-%define		beta	beta1
+%define		beta	beta4
 
 Summary:	An open source reimplementation of the Microprose game "Transport Tycoon Deluxe"
 Summary(pl.UTF-8):	Otwarta reimplementacja gry Transport Tycoon Deluxe
@@ -11,8 +11,8 @@ Version:	1.0.0
 Release:	0.%{beta}.1
 License:	GPL v2+
 Group:		X11/Applications/Games
-Source0:	http://binaries.openttd.org/releases/1.0.0-beta1/openttd-1.0.0-%{beta}-source.tar.bz2
-# Source0-md5:	5be9cae5afd2be6fedcc8c7a017f1e38
+Source0:	http://binaries.openttd.org/releases/1.0.0-beta4/%{name}-%{version}-%{beta}-source.tar.bz2
+# Source0-md5:	86ab729d534c3aa973786a0a1b4726c2
 Source1:	%{name}.desktop
 Source2:	%{name}-server.desktop
 Patch0:		%{name}-home_etc.patch
@@ -71,8 +71,8 @@ This package contains OpenTTD dedicated server. Note that
 graphics-enabled OpenTTD client also has this functionality.
 
 %description server -l pl.UTF-8
-Ten pakiet zawiera dedykowany serwer OpenTTD. Należy zwrócić uwagę,
-że graficzny klient OpenTTD również posiada tą funkcjonalność.
+Ten pakiet zawiera dedykowany serwer OpenTTD. Należy zwrócić uwagę, że
+graficzny klient OpenTTD również posiada tą funkcjonalność.
 
 %prep
 %setup -q -n %{name}-%{version}-%{beta}
@@ -174,7 +174,7 @@ rm -rf $RPM_BUILD_ROOT
 
 %files
 %defattr(644,root,root,755)
-%doc changelog.txt known-bugs.txt readme.txt docs/{Manual.txt,multiplayer.txt}
+%doc changelog.txt known-bugs.txt readme.txt docs/multiplayer.txt
 %attr(755,root,root) %{_bindir}/%{name}
 %{_desktopdir}/%{name}.desktop
 %{_mandir}/man6/openttd.*
