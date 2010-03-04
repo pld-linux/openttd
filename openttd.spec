@@ -2,7 +2,7 @@
 # Conditional build:
 %bcond_without	home_etc	# without home_etc support
 
-%define		beta	RC1
+%define		beta	RC2
 
 Summary:	An open source reimplementation of the Microprose game "Transport Tycoon Deluxe"
 Summary(pl.UTF-8):	Otwarta reimplementacja gry Transport Tycoon Deluxe
@@ -12,7 +12,7 @@ Release:	0.%{beta}.1
 License:	GPL v2+
 Group:		X11/Applications/Games
 Source0:	http://binaries.openttd.org/releases/%{version}-%{beta}/%{name}-%{version}-%{beta}-source.tar.bz2
-# Source0-md5:	81e11205c6835ef6d044d0633d0eaec8
+# Source0-md5:	dc2b520a5912bb206efc8aebad3a95fa
 Source1:	%{name}.desktop
 Source2:	%{name}-server.desktop
 Patch0:		%{name}-home_etc.patch
