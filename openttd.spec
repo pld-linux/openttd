@@ -22,6 +22,7 @@ BuildRequires:	freetype-devel
 %{?with_home_etc:BuildRequires:	home-etc-devel}
 BuildRequires:	libpng-devel
 BuildRequires:	libstdc++-devel
+BuildRequires:	lzo-devel
 BuildRequires:	pkgconfig
 BuildRequires:	sed >= 4.0
 BuildRequires:	zlib-devel
@@ -73,7 +74,7 @@ graphics-enabled OpenTTD client also has this functionality.
 
 %description server -l pl.UTF-8
 Ten pakiet zawiera dedykowany serwer OpenTTD. Należy zwrócić uwagę,
-że graficzny klient OpenTTD również posiada tą funkcjonalność.
+że graficzny klient OpenTTD również zawiera taką funkcjonalność.
 
 %prep
 %setup -q
