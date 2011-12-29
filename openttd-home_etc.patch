@@ -39,23 +39,22 @@ diff -burN openttd-0.6.0.orig/config.lib openttd-0.6.0/config.lib
  	if [ "$with_zlib" != "0" ]; then
  		if [ "$enable_static" != "0" ] && [ "$os" != "OSX" ]; then
  			LIBS="$LIBS $zlib"
-diff -burN openttd-0.6.0.orig/src/fileio.cpp openttd-0.6.0/src/fileio.cpp
---- openttd-0.6.0.orig/src/fileio.cpp	2008-04-06 12:28:02.523820995 +0200
-+++ openttd-0.6.0/src/fileio.cpp	2008-04-06 12:37:30.727651048 +0200
-@@ -19,6 +19,10 @@
- #endif
+--- openttd-1.2.0-beta1/src/fileio.cpp.orig	2011-12-24 10:13:06.000000000 +0100
++++ openttd-1.2.0-beta1/src/fileio.cpp	2011-12-29 14:58:18.100920008 +0100
+@@ -28,6 +28,10 @@
  #include <sys/stat.h>
+ #include <algorithm>
  
 +#ifdef HOME_ETC
 +#include <home_etc.h>
 +#endif
 +
- /*************************************************/
- /* FILE IO ROUTINES ******************************/
- /*************************************************/
-@@ -647,7 +651,11 @@
- #if defined(__MORPHOS__) || defined(__AMIGA__) || !defined(WITH_PERSONAL_DIR)
- 	_searchpaths[SP_PERSONAL_DIR] = NULL;
+ /** Size of the #Fio data buffer. */
+ #define FIO_BUFFER_SIZE 512
+ 
+@@ -1077,7 +1081,11 @@
+ 	find_directory(B_USER_SETTINGS_DIRECTORY, &path);
+ 	const char *homedir = path.Path();
  #else
 +#ifdef HOME_ETC
 +	const char *hometdir = _HEdir;
