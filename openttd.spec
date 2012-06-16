@@ -19,6 +19,7 @@ URL:		http://www.openttd.org/
 BuildRequires:	SDL-devel
 BuildRequires:	fontconfig-devel
 BuildRequires:	freetype-devel
+BuildRequires:	grfcodec >= 6.0.0
 %{?with_home_etc:BuildRequires:	home-etc-devel}
 BuildRequires:	libpng-devel
 BuildRequires:	libstdc++-devel
