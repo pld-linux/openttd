@@ -15,6 +15,7 @@ Source1:	%{name}.desktop
 Source2:	%{name}-server.desktop
 Patch0:		%{name}-home_etc.patch
 Patch1:		%{name}-libiconv.patch
+Patch2:		fontconfig2.10.patch
 URL:		http://www.openttd.org/
 BuildRequires:	SDL-devel
 BuildRequires:	fontconfig-devel
@@ -82,6 +83,7 @@ graficzny klient OpenTTD również zawiera taką funkcjonalność.
 %setup -q
 %{?with_home_etc:%patch0 -p1}
 %patch1 -p1
+%patch2 -p1
 
 # Let's pldize
 find src/lang/ -type f -exec %{__sed} -i 's/:Unix/:PLD Linux/' \{\} \;
