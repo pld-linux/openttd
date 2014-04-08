@@ -1,23 +1,23 @@
-diff -burN openttd-0.6.0.orig/config.lib openttd-0.6.0/config.lib
---- openttd-0.6.0.orig/config.lib	2008-04-06 12:28:03.600539135 +0200
-+++ openttd-0.6.0/config.lib	2008-04-06 12:31:30.843779880 +0200
-@@ -50,6 +50,7 @@
- 	with_application_bundle="1"
+diff -dur -x '*.orig' -x '*.rej' -x '*~' openttd-1.4.0.orig/config.lib openttd-1.4.0/config.lib
+--- openttd-1.4.0.orig/config.lib	2014-04-01 20:37:07.000000000 +0200
++++ openttd-1.4.0/config.lib	2014-04-08 19:28:02.013554008 +0200
+@@ -69,6 +69,7 @@
+ 	with_allegro="1"
  	with_sdl="1"
  	with_cocoa="1"
 +	with_home_etc="1"
  	with_zlib="1"
- 	with_png="1"
- 	with_makedepend="1"
-@@ -107,6 +108,7 @@
- 		with_application_bundle
+ 	with_lzma="1"
+ 	with_lzo2="1"
+@@ -144,6 +145,7 @@
+ 		with_allegro
  		with_sdl
  		with_cocoa
 +		with_home_etc
  		with_zlib
- 		with_png
- 		with_makedepend
-@@ -251,6 +253,9 @@
+ 		with_lzma
+ 		with_lzo2
+@@ -333,6 +335,9 @@
  			--without-cocoa)              with_cocoa="0";;
  			--with-cocoa=*)               with_cocoa="$optarg";;
  
@@ -27,7 +27,7 @@ diff -burN openttd-0.6.0.orig/config.lib openttd-0.6.0/config.lib
  			--with-zlib)                  with_zlib="2";;
  			--without-zlib)               with_zlib="0";;
  			--with-zlib=*)                with_zlib="$optarg";;
-@@ -1049,6 +1054,11 @@
+@@ -1651,6 +1656,11 @@
  		fi
  	fi
  
@@ -39,11 +39,12 @@ diff -burN openttd-0.6.0.orig/config.lib openttd-0.6.0/config.lib
  	if [ "$with_zlib" != "0" ]; then
  		if [ "$enable_static" != "0" ] && [ "$os" != "OSX" ]; then
  			LIBS="$LIBS $zlib"
---- openttd-1.2.0-beta1/src/fileio.cpp.orig	2011-12-24 10:13:06.000000000 +0100
-+++ openttd-1.2.0-beta1/src/fileio.cpp	2011-12-29 14:58:18.100920008 +0100
-@@ -28,6 +28,10 @@
- #include <sys/stat.h>
- #include <algorithm>
+diff -dur -x '*.orig' -x '*.rej' -x '*~' openttd-1.4.0.orig/src/fileio.cpp openttd-1.4.0/src/fileio.cpp
+--- openttd-1.4.0.orig/src/fileio.cpp	2014-04-01 20:37:03.000000000 +0200
++++ openttd-1.4.0/src/fileio.cpp	2014-04-08 19:30:30.296888687 +0200
+@@ -32,6 +32,10 @@
+ #include "basedir.h"
+ #endif
  
 +#ifdef HOME_ETC
 +#include <home_etc.h>
@@ -52,15 +53,15 @@ diff -burN openttd-0.6.0.orig/config.lib openttd-0.6.0/config.lib
  /** Size of the #Fio data buffer. */
  #define FIO_BUFFER_SIZE 512
  
-@@ -1077,7 +1081,11 @@
- 	find_directory(B_USER_SETTINGS_DIRECTORY, &path);
- 	const char *homedir = path.Path();
- #else
+@@ -1103,7 +1107,11 @@
+ 	 * or at least before something else touches the environment
+ 	 * variables in any way. It can also contain all kinds of
+ 	 * unvalidated data we rather not want internally. */
 +#ifdef HOME_ETC
-+	const char *hometdir = _HEdir;
++	const char *homedir = _HEdir;
 +#else
  	const char *homedir = getenv("HOME");
 +#endif
- 
- 	if (homedir == NULL) {
- 		const struct passwd *pw = getpwuid(getuid());
+ 	if (homedir != NULL) {
+ 		homedir = strndup(homedir, MAX_PATH);
+ 	}
