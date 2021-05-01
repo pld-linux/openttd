@@ -1,27 +1,19 @@
-#
-# Conditional build:
-%bcond_without	home_etc	# without home_etc support
-#
 Summary:	An open source reimplementation of the Microprose game "Transport Tycoon Deluxe"
 Summary(pl.UTF-8):	Otwarta reimplementacja gry Transport Tycoon Deluxe
 Name:		openttd
-Version:	1.6.1
-Release:	5
+Version:	1.11.1
+Release:	1
 License:	GPL v2+
 Group:		X11/Applications/Games
-Source0:	http://us.binaries.openttd.org/binaries/releases/%{version}/%{name}-%{version}-source.tar.xz
-# Source0-md5:	420c0488d2b085a1879ae2325e558310
+Source0:	https://cdn.openttd.org/openttd-releases/%{version}/%{name}-%{version}-source.tar.xz
+# Source0-md5:	f655453d1c9eee54415e1193a4ee499d
 Source1:	%{name}.desktop
 Source2:	%{name}-server.desktop
-Patch0:		%{name}-home_etc.patch
-Patch1:		%{name}-libiconv.patch
-Patch2:		%{name}-icu64.patch
 URL:		http://www.openttd.org/
-BuildRequires:	SDL-devel
+BuildRequires:	SDL2-devel
 BuildRequires:	fontconfig-devel
 BuildRequires:	freetype-devel
 BuildRequires:	grfcodec >= 6.0.2
-%{?with_home_etc:BuildRequires:	home-etc-devel}
 BuildRequires:	libicu-devel
 BuildRequires:	libpng-devel
 BuildRequires:	libstdc++-devel
@@ -35,7 +27,6 @@ Suggests:	%{name}-ai
 Suggests:	%{name}-opengfx
 Suggests:	%{name}-openmsx
 Suggests:	%{name}-opensfx
-Suggests:	TiMidity++
 Provides:	%{name}-binary = %{version}-%{release}
 BuildRoot:	%{tmpdir}/%{name}-%{version}-root-%(id -u -n)
 
@@ -82,9 +73,6 @@ graficzny klient OpenTTD również zawiera taką funkcjonalność.
 
 %prep
 %setup -q
-%{?with_home_etc:%patch0 -p1}
-%patch1 -p1
-%patch2 -p1
 
 # Let's pldize
 find src/lang/ -type f -exec %{__sed} -i 's/:Unix/:PLD Linux/' \{\} \;
@@ -92,71 +80,28 @@ find src/lang/ -type f -exec %{__sed} -i 's/:Unix/:PLD Linux/' \{\} \;
 %build
 
 # dedicated
-./configure \
-	CC="%{__cc}" \
-	CXX="%{__cxx}" \
-	CFLAGS="%{rpmcxxflags}" \
-	LDFLAGS="%{rpmldflags}" \
-	--cc-host="%{__cc}" \
-	--cc-build="%{__cc}" \
-	--cxx-host="%{__cxx}" \
-	--cxx-build="%{__cxx}" \
-	--disable-strip \
-	--prefix-dir="%{_prefix}" \
-	--binary-dir=bin \
-	--data-dir=share/openttd \
-	--icon-dir=share/pixmaps \
-	--install-dir=$RPM_BUILD_ROOT \
-	--os=UNIX \
-	--enable-dedicated \
-	--without-allegro \
-	--without-sdl \
-	--with-zlib \
-	--without-png \
-	--without-freetype \
-	--without-fontconfig \
-	--without-libtimidity
+install -d dedicated
+cd dedicated
+%cmake .. \
+	-DOPTION_DEDICATED:BOOL=ON \
+	-DCMAKE_INSTALL_BINDIR="bin" \
+	-DCMAKE_INSTALL_DATADIR="share"
 
-%{__make} \
-	MANUAL_CONFIG=1 \
-	INSTALL=1 \
-	VERBOSE=1
+%{__make}
 
-mv bin/openttd{,-dedicated}
+mv openttd{,-dedicated}
+
+cd ..
 
 # client
-rm -f Makefile.config
-%{__make} clean
-./configure \
-	CC="%{__cc}" \
-	CXX="%{__cxx}" \
-	CFLAGS="%{rpmcxxflags} $(sdl-config --cflags) -I/usr/include/freetype2" \
-	LDFLAGS="%{rpmldflags}" \
-	--cc-host="%{__cc}" \
-	--cc-build="%{__cc}" \
-	--cxx-host="%{__cxx}" \
-	--cxx-build="%{__cxx}" \
-	--disable-strip \
-	--prefix-dir="%{_prefix}" \
-	--binary-dir=bin \
-	--data-dir=share/openttd \
-	--icon-dir=share/pixmaps \
-	--install-dir=$RPM_BUILD_ROOT \
-	--os=UNIX \
-	--without-allegro \
-	--with-sdl \
-	--with-zlib \
-	--with-png \
-	--with-freetype \
-	--with-fontconfig \
-	--without-libtimidity \
-	--with-iconv \
-	--with-midi=%{_bindir}/timidity
+install -d build
+cd build
+%cmake .. \
+	-DCMAKE_INSTALL_BINDIR="bin" \
+	-DCMAKE_INSTALL_DATADIR="share" \
+	-DOPTION_DEDICATED:BOOL=OFF
 
-%{__make} \
-	MANUAL_CONFIG=1 \
-	INSTALL=1 \
-	VERBOSE=1
+%{__make}
 
 %install
 rm -rf $RPM_BUILD_ROOT
@@ -164,17 +109,16 @@ rm -rf $RPM_BUILD_ROOT
 install -d $RPM_BUILD_ROOT{%{_desktopdir},%{_mandir}/man6,%{_pixmapsdir}}
 install -d $RPM_BUILD_ROOT%{_datadir}/%{name}/{ai/library,scenario/heightmap}
 
-%{__make} install \
-	INSTALL_DIR=$RPM_BUILD_ROOT \
-	INSTALL=1 \
-	VERBOSE=1 \
-	PREFIX="/" \
+%{__make} -C build install \
+	DESTDIR=$RPM_BUILD_ROOT
 
-install bin/openttd-dedicated $RPM_BUILD_ROOT%{_bindir}
+install dedicated/openttd-dedicated $RPM_BUILD_ROOT%{_bindir}
 install %{SOURCE1} $RPM_BUILD_ROOT%{_desktopdir}
 install %{SOURCE2} $RPM_BUILD_ROOT%{_desktopdir}
 install docs/openttd.6 $RPM_BUILD_ROOT%{_mandir}/man6
 install media/openttd.256.png $RPM_BUILD_ROOT%{_pixmapsdir}/openttd.png
+
+%{__rm} $RPM_BUILD_ROOT%{_docdir}/{COPYING.md,README.md,changelog.txt,known-bugs.txt,multiplayer.md}
 
 %clean
 rm -rf $RPM_BUILD_ROOT
@@ -187,11 +131,11 @@ rm -rf $RPM_BUILD_ROOT
 
 %files
 %defattr(644,root,root,755)
-%doc changelog.txt known-bugs.txt readme.txt docs/multiplayer.txt
+%doc COPYING.md changelog.txt known-bugs.txt README.md docs/multiplayer.md
 %attr(755,root,root) %{_bindir}/%{name}
 %{_desktopdir}/%{name}.desktop
 %{_mandir}/man6/openttd.*
-%{_iconsdir}/*/*/*/openttd.png
+%{_iconsdir}/hicolor/*x*/apps/openttd.png
 
 %files data
 %defattr(644,root,root,755)
