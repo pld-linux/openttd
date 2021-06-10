@@ -1,14 +1,15 @@
 Summary:	An open source reimplementation of the Microprose game "Transport Tycoon Deluxe"
 Summary(pl.UTF-8):	Otwarta reimplementacja gry Transport Tycoon Deluxe
 Name:		openttd
-Version:	1.11.1
+Version:	1.11.2
 Release:	1
 License:	GPL v2+
 Group:		X11/Applications/Games
 Source0:	https://cdn.openttd.org/openttd-releases/%{version}/%{name}-%{version}-source.tar.xz
-# Source0-md5:	f655453d1c9eee54415e1193a4ee499d
+# Source0-md5:	77ff800d6682f86201a10c23f19a3dcf
 Source1:	%{name}.desktop
 Source2:	%{name}-server.desktop
+Patch0:		%{name}-create-grf.patch
 URL:		http://www.openttd.org/
 BuildRequires:	SDL2-devel
 BuildRequires:	fontconfig-devel
@@ -73,6 +74,7 @@ graficzny klient OpenTTD również zawiera taką funkcjonalność.
 
 %prep
 %setup -q
+%patch0 -p1
 
 # Let's pldize
 find src/lang/ -type f -exec %{__sed} -i 's/:Unix/:PLD Linux/' \{\} \;
