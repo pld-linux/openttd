@@ -1,6 +1,6 @@
---- openttd-1.11.2/cmake/scripts/CreateGRF.cmake~	2021-05-03 18:41:45.000000000 +0000
-+++ openttd-1.11.2/cmake/scripts/CreateGRF.cmake	2021-06-10 15:09:20.570503949 +0000
-@@ -39,20 +39,7 @@
+--- openttd-14.0/cmake/scripts/CreateGRF.cmake~	2024-04-13 12:55:23.000000000 +0000
++++ openttd-14.0/cmake/scripts/CreateGRF.cmake	2024-04-18 23:10:40.170610231 +0000
+@@ -45,21 +45,9 @@
      endif()
  endforeach()
  
@@ -11,15 +11,16 @@
 -    endif()
 -    message(FATAL_ERROR "NFORenum failed")
 -endif()
--
--execute_process(COMMAND ${GRFCODEC_EXECUTABLE} -n -s -e -p1 ${GRF_SOURCE_FOLDER_NAME}.grf RESULT_VARIABLE RESULT)
++execute_process(COMMAND ${NFORENUM_EXECUTABLE} -s sprites/${GRF_SOURCE_FOLDER_NAME}.nfo)
+ 
+-execute_process(COMMAND ${GRFCODEC_EXECUTABLE} -n -s -e -g2 -p1 ${GRF_SOURCE_FOLDER_NAME}.grf RESULT_VARIABLE RESULT)
 -if(RESULT)
 -    if(NOT RESULT MATCHES "^[0-9]*$")
 -        message(FATAL_ERROR "Failed to run GRFCodec (${RESULT}), please check GRFCODEC_EXECUTABLE variable")
 -    endif()
 -    message(FATAL_ERROR "GRFCodec failed")
 -endif()
-+execute_process(COMMAND ${NFORENUM_EXECUTABLE} -s sprites/${GRF_SOURCE_FOLDER_NAME}.nfo)
-+execute_process(COMMAND ${GRFCODEC_EXECUTABLE} -n -s -e -p1 ${GRF_SOURCE_FOLDER_NAME}.grf)
++execute_process(COMMAND ${GRFCODEC_EXECUTABLE} -n -s -e -g2 -p1 ${GRF_SOURCE_FOLDER_NAME}.grf)
  
- execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${GRF_SOURCE_FOLDER_NAME}.grf ${GRF_BINARY_FILE})
+ execute_process(COMMAND ${GRFID_EXECUTABLE} -m ${GRF_SOURCE_FOLDER_NAME}.grf OUTPUT_VARIABLE GRFID_HASH RESULT_VARIABLE RESULT)
+ if(RESULT)

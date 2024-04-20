@@ -1,12 +1,12 @@
 Summary:	An open source reimplementation of the Microprose game "Transport Tycoon Deluxe"
 Summary(pl.UTF-8):	Otwarta reimplementacja gry Transport Tycoon Deluxe
 Name:		openttd
-Version:	13.4
+Version:	14.0
 Release:	1
 License:	GPL v2+
 Group:		X11/Applications/Games
 Source0:	https://cdn.openttd.org/openttd-releases/%{version}/%{name}-%{version}-source.tar.xz
-# Source0-md5:	ed42437a6f33e83b3e27f9ebd988efc4
+# Source0-md5:	f8244406ab5a1efcdf4fe8d173516a5a
 Source1:	%{name}.desktop
 Source2:	%{name}-server.desktop
 Patch0:		%{name}-create-grf.patch
@@ -117,10 +117,10 @@ install -d $RPM_BUILD_ROOT%{_datadir}/%{name}/{ai/library,scenario/heightmap}
 install dedicated/openttd-dedicated $RPM_BUILD_ROOT%{_bindir}
 install %{SOURCE1} $RPM_BUILD_ROOT%{_desktopdir}
 install %{SOURCE2} $RPM_BUILD_ROOT%{_desktopdir}
-install docs/openttd.6 $RPM_BUILD_ROOT%{_mandir}/man6
+%{__mv} docs/openttd.6 $RPM_BUILD_ROOT%{_mandir}/man6
 install media/openttd.256.png $RPM_BUILD_ROOT%{_pixmapsdir}/openttd.png
 
-%{__rm} $RPM_BUILD_ROOT%{_docdir}/{COPYING.md,README.md,changelog.txt,known-bugs.txt,multiplayer.md}
+%{__rm} -r $RPM_BUILD_ROOT%{_docdir}
 
 %clean
 rm -rf $RPM_BUILD_ROOT
@@ -133,7 +133,8 @@ rm -rf $RPM_BUILD_ROOT
 
 %files
 %defattr(644,root,root,755)
-%doc COPYING.md changelog.txt known-bugs.txt README.md docs/multiplayer.md
+#%doc CONTRIBUTING.md COPYING.md README.md changelog.txt known-bugs.txt docs/{*.md,*.html,*.svg,*png,*.txt}
+%doc CONTRIBUTING.md COPYING.md README.md changelog.txt known-bugs.txt docs
 %attr(755,root,root) %{_bindir}/%{name}
 %{_desktopdir}/%{name}.desktop
 %{_mandir}/man6/openttd.*
