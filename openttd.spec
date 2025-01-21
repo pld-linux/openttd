@@ -10,6 +10,7 @@ Source0:	https://cdn.openttd.org/openttd-releases/%{version}/%{name}-%{version}-
 Source1:	%{name}.desktop
 Source2:	%{name}-server.desktop
 Patch0:		%{name}-create-grf.patch
+Patch1:		icu76.patch
 URL:		http://www.openttd.org/
 BuildRequires:	SDL2-devel
 BuildRequires:	fontconfig-devel
@@ -74,7 +75,8 @@ graficzny klient OpenTTD również zawiera taką funkcjonalność.
 
 %prep
 %setup -q
-%patch0 -p1
+%patch -P0 -p1
+%patch -P1 -p1
 
 # Let's pldize
 find src/lang/ -type f -exec %{__sed} -i 's/:Unix/:PLD Linux/' \{\} \;
