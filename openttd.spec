@@ -1,16 +1,15 @@
 Summary:	An open source reimplementation of the Microprose game "Transport Tycoon Deluxe"
 Summary(pl.UTF-8):	Otwarta reimplementacja gry Transport Tycoon Deluxe
 Name:		openttd
-Version:	14.1
-Release:	2
+Version:	15.0
+Release:	1
 License:	GPL v2+
 Group:		X11/Applications/Games
 Source0:	https://cdn.openttd.org/openttd-releases/%{version}/%{name}-%{version}-source.tar.xz
-# Source0-md5:	cb708ae418a12175385267e0dd74b4f6
+# Source0-md5:	7df6e6acfb71db306da4e5145588f332
 Source1:	%{name}.desktop
 Source2:	%{name}-server.desktop
 Patch0:		%{name}-create-grf.patch
-Patch1:		icu76.patch
 URL:		http://www.openttd.org/
 BuildRequires:	SDL2-devel
 BuildRequires:	fontconfig-devel
@@ -76,7 +75,6 @@ graficzny klient OpenTTD również zawiera taką funkcjonalność.
 %prep
 %setup -q
 %patch -P0 -p1
-%patch -P1 -p1
 
 # Let's pldize
 find src/lang/ -type f -exec %{__sed} -i 's/:Unix/:PLD Linux/' \{\} \;
@@ -135,8 +133,7 @@ rm -rf $RPM_BUILD_ROOT
 
 %files
 %defattr(644,root,root,755)
-#%doc CONTRIBUTING.md COPYING.md README.md changelog.txt known-bugs.txt docs/{*.md,*.html,*.svg,*png,*.txt}
-%doc CONTRIBUTING.md COPYING.md README.md changelog.txt known-bugs.txt docs
+%doc CONTRIBUTING.md COPYING.md README.md changelog.md known-bugs.md docs
 %attr(755,root,root) %{_bindir}/%{name}
 %{_desktopdir}/%{name}.desktop
 %{_mandir}/man6/openttd.*
